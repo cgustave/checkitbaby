@@ -86,7 +86,6 @@ class Testrunner(object):
             filename='debug.log',
             level=log.NOTSET)
 
-
         # Set debug level first
         if debug:
             self.debug = True
@@ -104,10 +103,19 @@ class Testrunner(object):
         # Attributs
         self.run = None                              # the run identifier
         self.variables = {}                          # dictionnary of testcases variables
-        self.playbook = None    
+        self.playbook = [] 
         self.agents = {}                             # dictionary of agent (keys are agents name)
         self.report = {}                             # dictionary of reports (keys are reports name)
         self.path = path                             # base path of the playbook store 
+
+    def load_playbook(self, name=''):
+        """
+        Loads a playbook as a first element of list self.playbook 
+        """
+        log.info("Enter with name={}".format(name))
+        pb = Playbook(name=name, path=self.path, debug=self.debug)
+        self.playbook.append(pb) 
+        self.playbook[0].register()
 
     def load_variables(self):
         """
@@ -136,30 +144,6 @@ class Testrunner(object):
         Returns : agents json format
         """
         return json.dumps(self.agents, indent=4)
-
-    def register_testcases(self, playbook='myPlaybook'):
-        """
-        Load the playbook testcases references
-        Does not load the testcases scenario
-        Directory contains all testcases (one file per testcase)
-        Returns the number of loaded testcases
-        """
-        log.info("Enter with playbook={}".format(playbook))
-        nb = 0
-        for filename in os.listdir(self.path+"/"+playbook+"/testcases"):
-            nb=+1
-            log.debug("nb={} filename={}".format(nb, filename))
-            
-            # Extract testcase id and name from filename
-            match = re.search("^(?P<id>\d+)(?:_)(?P<name>\S+)(?:.txt)",filename)
-            if match:
-                log.debug("id={} name={}".format(match.group('id'),match.group('name')))
-                
-            else:
-                log.debug("no match")
-
-
-        return nb
 
     def get_playbook(self):
         """
