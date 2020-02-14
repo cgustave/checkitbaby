@@ -89,19 +89,11 @@ CLASSES
      |      Requirements : previous call to load_playbook
      |      Returns : playbook in json format
      |  
-     |  get_variables(self)
-     |      Requirements : previous call to load_variables
-     |      Returns : testcase variables in json format
-     |  
      |  load_agents(self)
      |      Load all agents with their details from json file
      |  
      |  load_playbook(self, name='')
      |      Loads a playbook as a first element of list self.playbook
-     |  
-     |  load_variables(self)
-     |      Load all variables used in the testcase taken from json file format
-     |      variables.json
      |  
      |  report(self, run='1')
      |      Requirement : a minimum of a testcase should have been run on the given run id

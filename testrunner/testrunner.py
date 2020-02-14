@@ -116,21 +116,6 @@ class Testrunner(object):
         self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
         self.playbook.register()
 
-    def load_variables(self):
-        """
-        Load all variables used in the testcase taken from json file format
-        variables.json
-        """
-        log.info("Enter")
-
-    def get_variables(self):
-        """
-        Requirements : previous call to load_variables
-        Returns : testcase variables in json format
-        """
-        log.info("Enter")
-        return json.dumps(self.variables, indent=4)
-
     def load_agents(self):
         """
         Load all agents with their details from json file

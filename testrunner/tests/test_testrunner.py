@@ -27,8 +27,6 @@ class TestrunnerTestCase(unittest.TestCase):
         self.tr = Testrunner(path='./playbooks', debug=True)
 
     def test_loading(self):
-        self.tr.load_agents()
-        self.tr.load_variables()
         self.tr.load_playbook(name="myPlaybook")
         self.tr.playbook.testcases[0].disable()
         self.tr.playbook.testcases[0].enable()

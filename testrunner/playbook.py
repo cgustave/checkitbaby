@@ -7,6 +7,7 @@ Created on Feb 12, 2019
 import logging as log
 import os 
 import re
+import json
 from testcase import Testcase
 
 class Playbook(object):
@@ -35,8 +36,12 @@ class Playbook(object):
         # Attributs
         self.name = name
         self.path = path
+
+        self.testcases = []           # List of testcase objects
+        self.testcases_agents = []    # List of agents used in the testcases
         self.nb_testcases = 0  
-        self.testcases = []      # A list of testcase objects
+
+        self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
 
     def register(self):
         """
@@ -66,6 +71,7 @@ class Playbook(object):
 
         self.nb_testcases = nb
         log.debug("Number of registered testcases={}".format(self.nb_testcases))
+        self._register_used_agents()
 
     def _register_testcase(self, id, name, filename):
         """
@@ -76,9 +82,35 @@ class Playbook(object):
         tc = Testcase(id=id, name=name, playbook=self.name, path=self.path, filename=filename)
         self.testcases.append(tc)
 
+    def _register_used_agents(self):
+        """
+        Requirements : _register_testcase()
+        Go through all registered testcases, extract the agents and compile the
+        list in self.agents
+        """
+        log.info("Enter")
+
+        for tc in self.testcases:
+            log.debug("id={} name={} agents={}".format(tc.id, tc.name, str(tc.agents)))
+            for agent in tc.agents:
+                if agent not in self.testcases_agents:
+                    log.debug("Playbook new agent={}".format(agent))
+                    self.testcases_agents.append(agent)
+
+    def load_agents(self):
+        """
+        Load all agents with their details from json file
+        """
+        log.info("Enter")
+
+
+    def get_agents(self):
+        """
+        Requirements : previous call to load_agents
+        Returns : agents json format
+        """
+        return json.dumps(self.agents, indent=4)
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")
-
-
-
