@@ -38,7 +38,6 @@ class Playbook(object):
         self.nb_testcases = 0  
         self.testcases = []      # A list of testcase objects
 
-
     def register(self):
         """
         Load the playbook testcases references
@@ -51,7 +50,7 @@ class Playbook(object):
         log.info("Enter")
         nb = 0
         for filename in os.listdir(self.path+"/"+self.name+"/testcases"):
-            nb=+1
+            nb=nb+1
             log.debug("nb={} filename={}".format(nb, filename))
             
             # Extract testcase id and name from filename
@@ -60,7 +59,7 @@ class Playbook(object):
                 id = match.group('id')
                 name = match.group('name')
                 log.debug("id={} name={}".format(id,name))
-                self._register_testcase(id=id, name=name)
+                self._register_testcase(id=id, name=name, filename=filename)
                 
             else:
                 log.debug("no match")
@@ -68,14 +67,14 @@ class Playbook(object):
         self.nb_testcases = nb
         log.debug("Number of registered testcases={}".format(self.nb_testcases))
 
-    def _register_testcase(self, id, name):
+    def _register_testcase(self, id, name, filename):
         """
         Register one testcase from id and name
         """
-        log.info("Enter with id={} name={}".format(id,name))
+        log.info("Enter with id={} name={} filename={}".format(id,name,filename))
 
-        tc = Testcase(id=id, name=name, workbook=self.name, path=self.path)
-
+        tc = Testcase(id=id, name=name, playbook=self.name, path=self.path, filename=filename)
+        self.testcases.append(tc)
 
 
 if __name__ == '__main__': #pragma: no cover

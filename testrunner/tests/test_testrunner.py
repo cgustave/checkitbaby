@@ -30,7 +30,9 @@ class TestrunnerTestCase(unittest.TestCase):
         self.tr.load_agents()
         self.tr.load_variables()
         self.tr.load_playbook(name="myPlaybook")
-        self.assertEqual(self.tr.playbook[0].nb_testcases,1)
+        self.tr.playbook.testcases[0].disable()
+        self.tr.playbook.testcases[0].enable()
+        #self.assertEqual(self.tr.playbook.nb_testcases,2)
 
 
 if __name__ == '__main__':

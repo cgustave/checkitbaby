@@ -103,7 +103,7 @@ class Testrunner(object):
         # Attributs
         self.run = None                              # the run identifier
         self.variables = {}                          # dictionnary of testcases variables
-        self.playbook = [] 
+        self.playbook = None                         # Playbook object instance 
         self.agents = {}                             # dictionary of agent (keys are agents name)
         self.report = {}                             # dictionary of reports (keys are reports name)
         self.path = path                             # base path of the playbook store 
@@ -113,9 +113,8 @@ class Testrunner(object):
         Loads a playbook as a first element of list self.playbook 
         """
         log.info("Enter with name={}".format(name))
-        pb = Playbook(name=name, path=self.path, debug=self.debug)
-        self.playbook.append(pb) 
-        self.playbook[0].register()
+        self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
+        self.playbook.register()
 
     def load_variables(self):
         """
