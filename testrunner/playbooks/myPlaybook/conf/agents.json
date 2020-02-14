@@ -1,0 +1,19 @@
+{
+	"lxc1" : {
+				"type" : "lxc",
+				"ip" : "192.168.0.2",
+				"port" : "22",
+				"login" : "root",
+				"password" : "fortinet",
+				"ssh_key_file" : "",
+			},
+
+	"lxc2" : {
+				"type" : "lxc",
+				"ip" : "192.168.0.3",
+				"port" : "22",
+				"login" : "root",
+				"password" : "fortinet",
+				"ssh_key_file" : "",
+			},
+}
