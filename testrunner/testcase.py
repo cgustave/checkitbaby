@@ -12,6 +12,14 @@ import re
 class Testcase(object):
     """
     Testcase class
+    Test cases are defined within a playbook directory inside dir 'testcases'
+    They are organised in multiple files, one testcase per file.
+    Filename format is "<id>_<name>.txt" 
+      ex : /fortipoc/playbooks/advpn/testcases/1_environment.txt
+      ex : /fortipoc/playbooks/advpn/testcases/2_connectivity.txt
+      ex : /fortipoc/playbooks/advpn/testcases/3_ipsec_tunnels.txt
+      ex : /fortipoc/playbooks/advpn/testcases/4_routing.txt
+
     """
 
     def __init__(self, id='', name='', playbook='', path='', filename='', debug=False):

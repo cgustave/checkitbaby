@@ -43,9 +43,13 @@ class TestrunnerTestCase(unittest.TestCase):
         else:
             print ("Missing some agents to run selected testcases\n") 
 
-        # Run the playbook
-
         #self.assertEqual(self.tr.playbook.nb_testcases,2)
+
+
+    def test_run_playbook(self):
+        self.tr.load_playbook(name="myPlaybook")
+        self.tr.run_all_testcases(run=1)
+
 
 
 if __name__ == '__main__':

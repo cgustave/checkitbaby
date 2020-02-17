@@ -84,6 +84,7 @@ class Testrunner(object):
         self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
         self.playbook.register()
 
+
     def get_playbook(self):
         """
         Requirements : previous call to load_playbook
@@ -92,11 +93,13 @@ class Testrunner(object):
         log.info("Enter")
         return json.dump(self.playbook, indent=4)
 
-    def run_all(self):
+    def run_all_testcases(self, run=None):
         """
-        Runs the full playbook testcases
+        Runs the full playbook testcases on the given run id
         """
-        log.info("Enter")
+        log.info("Enter with run={}".format(run))
+        self.playbook.run(run=run)
+
 
     def run_testcase(self, run, id):
         """

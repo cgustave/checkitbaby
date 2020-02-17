@@ -64,8 +64,8 @@ CLASSES
      |      Provide a report from the last testcases that ran in run 1
      |      Return: Report in json format
      |  
-     |  run_all(self)
-     |      Runs the full playbook testcases
+     |  run_all_testcases(self, run=None)
+     |      Runs the full playbook testcases on the given run id
      |  
      |  run_testcase(self, run, id)
      |      Runs a single testcase specified by its id

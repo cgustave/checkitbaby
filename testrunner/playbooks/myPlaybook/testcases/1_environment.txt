@@ -1,11 +1,11 @@
 #
 # Prepare test environment
 
-rt-1 network-emulator WAN delay 100 
-rt-1 network-emulator WAN loss 0
+rt-1:0 network-emulator WAN delay 100 
+rt-1:0 network-emulator WAN loss 0
 
-rt-2 network-emulator WAN delay 100 
-rt-2 network-emulator WAN loss 0
+rt-2:0 network-emulator WAN delay 100 
+rt-2:0 network-emulator WAN loss 0
 
-rt-3 network-emulator WAN delay 100 
-rt-3 network-emulator WAN loss 0
+rt-3:0 network-emulator WAN delay 100 
+rt-3:0 network-emulator WAN loss 0

@@ -87,6 +87,8 @@ class Playbook(object):
         self.nb_testcases = 0  
 
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
+        self.agents_connections = {}  # SSH connection handle to agents key is agent name
+                                      # ex : {'lxc1' : { '1' : SSH1, '2' : SSH2} }
 
     def register(self):
         """
@@ -150,7 +152,80 @@ class Playbook(object):
         return result
 
 
+    def run(self, run=None):
+        """
+        Requirements : playbook should have been registered (and ideally
+        verify_agents)
+        """
+        log.info("Enter with run={}".format(run))
+        for tc in self.testcases:
+            log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
+            self.process_testcase(testcase=tc)
+
+    def process_testcase(self, testcase=None):
+        """
+        Processes all statements from a given testcase :
+        Process each line of the scenario, for each line :
+            Extract the agent name, type and connection
+        """
+        log.info("Enter")
+        log.debug("Testcase id={} name={}".format(testcase.id, testcase.name))
+
+        for line in testcase.lines:
+            log.debug("line={}".format(line))
+
+            # Get agent name, type and connection_id
+            (agent_name, agent_type, agent_conn) = self._get_agent_from_tc_line(id=testcase.id, line=line)
+            log.debug("agent_name={} agent_type={} agent_conn={}".format(agent_name, agent_type, agent_conn))
+
+            # Manage the connection to agent : if connection is not already open,
+            # then open it
+          
+            if not agent_name in self.agents_connections:
+               log.debug("create a new agent={} in our agents_connections dictionnary".format(agent_name))
+               self.agents_connections[agent_name] = {}
+
+            if not agent_conn in self.agents_connections[agent_name]:
+                log.debug("Create a new connection conn={} for agent={}".format(agent_conn,agent_name))
+                # TBD 
+
+            else:
+                log.debug("Connection conn={} already exists".format(agent_conn))
+
+
     ### PRIVATE METHODS ###
+
+    def _get_agent_from_tc_line(self, id=None, line=""):
+        """
+        Returns a list (agent_name, agent_type, agent_connection) from the testcase line
+        """
+        log.info("Enter with id={} line={}".format(id, line))
+        agent_name = ""  # taken from the line
+        agent_conn = ""  # taken from the line
+        agent_type = ""  # Extracted from agent file
+
+        # Get agent name and connection id from the line
+        match = re.search("(?:\s|\t)*(?P<agent>[A-Za-z0-9\-_]+)(?::)(?P<conn>\d+)",line)
+        if match:
+            agent_name = match.group('agent')
+            agent_conn =  match.group('conn')
+            log.debug("Found id={} agent={} conn={}".format(id, agent_name, agent_conn))
+
+            # Get agent type from agent file
+            agent_type = self.agents[agent_name]['type']
+            log.debug("Found corresponding type={}".format(agent_type))
+
+        else:
+            log.debug("Could not find agent name and connection id={} line={}".format(id, line))
+            print("warning: testcase id={} line={} : can't extract agent name and connection id (format NAME:ID)".format(id, line))
+
+
+        return (agent_name, agent_type, agent_conn)
+
+
+
+
+
 
     def _register_testcase(self, id, name, filename):
         """
