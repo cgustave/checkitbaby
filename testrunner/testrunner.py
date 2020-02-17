@@ -25,54 +25,25 @@ from playbook import Playbook
 
 class Testrunner(object):
     """
-    Main application. 
+    Main application. This is the interface with the user.
+    Defines the global settings
+    Provides a playbook name to run
+    Registers the playbook testcases (load the testcases from the given
+    playbook). Allows to enable/disable some of the testcases.
+    Runs a playbook
+    Provide feedback
 
-    #### A testrunner contains :
-        - mutliple test agents with their definitions
-        - a single playbook containing the testcases
-        - a report structure filled from the testcases when run
+    A testrunner contains :
+        - a single playbook object (containing the testcases, agents...)
+        - a run id 
 
     It is called with:
         - a base path for the playbook
         - a debug level  
 
-    #### Directory structure:
+    Directory structure:
         - /PLAYBOOK_BASE_PATH : The base name of the playbook location
-        ex : /fortipoc/playbooks
-
-       * /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
-       ex : /fortipoc/playbooks/advpn
-
-       * /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf : configuration directory
-
-            - /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/agents.json  : files with agents definitions in json format
-            ex : /fortipoc/playbooks/advpn/conf/agents.json
-
-            - /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/variables.json : file defining all variables in json format 
-
-       * /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases    : directory containing testcases
-       ex : /fortipoc/playbooks/advpn/testcases
-
-            - /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases/NNN_TESTCASE_NAME : one testcase file
-            with NNN : a number starting from 0 (used as testcase index)
-            TESTCASE_NAME : any name for the testcase
-
-             ex : /fortipoc/playbooks/advpn/testcases/1_environment.txt
-             ex : /fortipoc/playbooks/advpn/testcases/2_connectivity.txt
-             ex : /fortipoc/playbooks/advpn/testcases/3_ipsec_tunnels.txt
-             ex : /fortipoc/playbooks/advpn/testcases/4_routing.txt
-
-       * /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/runs   : directory for all runs
-       ex : /fortipoc/playbooks/advpn/runs
-
-            - /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/runs/1 : directory for run number 1 
-            ex : /fortipoc/playbooks/advpn/runs/1
-
-            - /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/runs/1/report.json : report from run 1
-    
-    #### Internal attributs schemes
-
-       * self.playbook 
+          ex : /fortipoc/playbooks
 
     """
 
@@ -101,11 +72,8 @@ class Testrunner(object):
                  format(path, debug))
 
         # Attributs
-        self.run = None                              # the run identifier
-        self.variables = {}                          # dictionnary of testcases variables
+        self.run = None                              # the run id identifier
         self.playbook = None                         # Playbook object instance 
-        self.agents = {}                             # dictionary of agent (keys are agents name)
-        self.report = {}                             # dictionary of reports (keys are reports name)
         self.path = path                             # base path of the playbook store 
 
     def load_playbook(self, name=''):
@@ -115,19 +83,6 @@ class Testrunner(object):
         log.info("Enter with name={}".format(name))
         self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
         self.playbook.register()
-
-    def load_agents(self):
-        """
-        Load all agents with their details from json file
-        """ 
-        log.info("Enter")
-
-    def get_agents(self):
-        """
-        Requirements : previous call to load_agents
-        Returns : agents json format
-        """
-        return json.dumps(self.agents, indent=4)
 
     def get_playbook(self):
         """

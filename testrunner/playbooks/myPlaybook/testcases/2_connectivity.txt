@@ -15,5 +15,3 @@ srv-1:1 data send "bob"
 clt-1:1 check [clt recv] data receive "bob" since "client ready"
 clt-1:1 close 
 
-
-

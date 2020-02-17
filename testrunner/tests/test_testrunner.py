@@ -27,9 +27,24 @@ class TestrunnerTestCase(unittest.TestCase):
         self.tr = Testrunner(path='./playbooks', debug=True)
 
     def test_loading(self):
+
+        # Load the given playbook testcases 
         self.tr.load_playbook(name="myPlaybook")
+
+        # Disable / Enable some of the testcases
         self.tr.playbook.testcases[0].disable()
         self.tr.playbook.testcases[0].enable()
+
+        # verify the playbook : 
+        print ("Loaded agents list: \n{}".format(self.tr.playbook.get_agents()))
+        # Check if the required agents are defined for the enabled testcases 
+        if self.tr.playbook.verify_agents():
+            print ("All agents required for selected testcases are defined\n")
+        else:
+            print ("Missing some agents to run selected testcases\n") 
+
+        # Run the playbook
+
         #self.assertEqual(self.tr.playbook.nb_testcases,2)
 
 

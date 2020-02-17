@@ -5,8 +5,8 @@
 				"port" : 22,
 				"login" : "root",
 				"password" : "fortinet",
-				"ssh_key_file" : "",
-			  },
+				"ssh_key_file" : ""
+	},
 
 	"srv-1" : {
 				"type" : "lxc",
@@ -14,7 +14,7 @@
 				"port" : 22,
 				"login" : "root",
 				"password" : "fortinet",
-				"ssh_key_file" : "",
+				"ssh_key_file" : ""
 			  },
 	"rt-1" : {
 		        "type" : "vyos",
@@ -22,7 +22,7 @@
 				"port" : 22,
 				"login" : "vyos",
 				"password" : "vyos",
-				"ssh_key_file" : "",`
+				"ssh_key_file" : ""
 	         },
 	"rt-2" : {
 		        "type" : "vyos",
@@ -30,7 +30,7 @@
 				"port" : 22,
 				"login" : "vyos",
 				"password" : "vyos",
-				"ssh_key_file" : "",`
+				"ssh_key_file" : ""
 	         },
 	"rt-3" : {
 		        "type" : "vyos",
@@ -38,7 +38,7 @@
 				"port" : 22,
 				"login" : "vyos",
 				"password" : "vyos",
-				"ssh_key_file" : "",`
-	         },
+				"ssh_key_file" : ""
+	         }
 
 }
