@@ -21,26 +21,6 @@ class Agent(object):
         # we are only interested in the methods
         # attributes are the sons ones
         
-        # create logger
-        #log.basicConfig(
-        #      format='%(asctime)s,%(msecs)3.3d %(levelname)-8s[%(module)-\
-        #      10.10s.%(funcName)-20.20s:%(lineno)5d] %(message)s',
-        #      datefmt='%Y%m%d:%H:%M:%S',
-        #      filename='debug.log',
-        #      level=log.NOTSET)
-        # Set debug level first
-
-        #if debug:
-        #    self.debug = True
-        #    log.basicConfig(level='DEBUG')
-
-        #log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
-        #
-        #self.name = name
-        #self.conn = conn
-        #self.dryrun = dryrun
-
-
     def process_generic(self, line=""):
         """
         Generic processing done for any kind of agents
@@ -104,12 +84,13 @@ class Agent(object):
         else:
            log.debug("could not extract mark message")
 
+
     def process(self, line=""):
         """
         Generic line processing for agents
-        This method could be overwritten in the specific agent
+        This method should be overwritten in the specific agent
         """
-        log.info("Enter with line={}".format(line))
+        log.info("Enter (catch all) with line={}".format(line))
 
 
     def get_trace_filename(self):
