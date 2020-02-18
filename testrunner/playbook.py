@@ -65,7 +65,7 @@ class Playbook(object):
          ex : /fortipoc/playbooks/advpn/run/1/Summary_report.json
     """
 
-    def __init__(self, name='', path='', debug=False):
+    def __init__(self, name='', path='', run=1, debug=False):
 
         # create logger
         log.basicConfig(
@@ -80,11 +80,12 @@ class Playbook(object):
             self.debug = True
             log.basicConfig(level='DEBUG')
 
-        log.info("Constructor with name={} path={} debug={}".format(name, path, debug))
+        log.info("Constructor with name={} path={} run={} debug={}".format(name, path, run, debug))
 
         # Attributs
         self.name = name
         self.path = path
+        self.run = run                # Run id
 
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
@@ -93,6 +94,8 @@ class Playbook(object):
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
+        self.dryrun = False           # Used for scenario syntax verification only (no connection to agent)
+
 
     def register(self):
         """
@@ -156,12 +159,12 @@ class Playbook(object):
         return result
 
 
-    def run(self, run=None):
+    def run_testcases(self):
         """
-        Requirements : playbook should have been registered (and ideally
-        verify_agents)
+        Requirements : playbook should have been registered (and ideally verify_agents)
+        run attributs should be set
         """
-        log.info("Enter with run={}".format(run))
+        log.info("Enter")
         for tc in self.testcases:
             log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
             self.process_testcase(testcase=tc)
@@ -199,6 +202,12 @@ class Playbook(object):
                 raise SystemExit 
 
             # Proceed with Agent specific command line
+            # feed agent attributs
+            self.agents_connections[agent_name][agent_conn].path = self.path
+            self.agents_connections[agent_name][agent_conn].playbook = self.name
+            self.agents_connections[agent_name][agent_conn].run = self.run
+
+            self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=line)
 
 
@@ -229,13 +238,13 @@ class Playbook(object):
             result = True
 
             if type == "lxc":
-                self.agents_connections[name][conn] = Lxc_agent (name=name, debug=self.debug)
+                self.agents_connections[name][conn] = Lxc_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             elif type == "vyos":
-                self.agents_connections[name][conn] = Vyos_agent (name=name, debug=self.debug)
+                self.agents_connections[name][conn] = Vyos_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             elif type == "fortipoc":
-                self.agents_connections[name][conn] = Fortipoc_agent (name=name, debug=self.debug)
+                self.agents_connections[name][conn] = Fortipoc_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             elif type == "fortigate":
-                self.agents_connections[name][conn] = Fortigate_agent (name=name, debug=self.debug)
+                self.agents_connections[name][conn] = Fortigate_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             else:
                 print ("Error: undefined type for agent {}".format(type))
                 raise SystemExit

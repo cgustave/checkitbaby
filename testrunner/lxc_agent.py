@@ -12,7 +12,7 @@ class Lxc_agent(Agent):
     LXC agent
     """
 
-    def __init__(self, name='', debug=False):
+    def __init__(self, name='', conn=0, dryrun=False, debug=False):
         """
         Constructor
         """
@@ -30,10 +30,34 @@ class Lxc_agent(Agent):
             self.debug = True
             log.basicConfig(level='DEBUG')
 
-        log.info("Constructor with name={} debug={}".format(name, debug))
+        log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
-        self.name = None
-        super(Lxc_agent,self).__init__(name=name, debug=debug)
+        # Attributs set in init
+        self.name = name 
+        self.conn = conn
+        self.dryrun = dryrun 
+
+        # Attributs to be set before processing 
+        self.path = None
+        self.playbook = None
+        self.run = None
+
+
+    def process(self, line=""):
+        """
+        LXC specific line processing
+
+        """
+        log.info("Enter with line={}".format(line))
+
+        # Sanity checks
+        if self.path == None:
+            log.error("Undefined path")
+            raise SystemExit
+
+
+
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

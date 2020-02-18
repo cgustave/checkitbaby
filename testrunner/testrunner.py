@@ -98,7 +98,8 @@ class Testrunner(object):
         Runs the full playbook testcases on the given run id
         """
         log.info("Enter with run={}".format(run))
-        self.playbook.run(run=run)
+        self.playbook.run = run
+        self.playbook.run_testcases()
 
 
     def run_testcase(self, run, id):

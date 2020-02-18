@@ -12,7 +12,7 @@ class Vyos_agent(Agent):
     Vyos agent
     """
 
-    def __init__(self, name='', debug=False):
+    def __init__(self, name='', conn=0, dryrun=False, debug=False):
         """
         Constructor
         """
@@ -30,10 +30,12 @@ class Vyos_agent(Agent):
             self.debug = True
             log.basicConfig(level='DEBUG')
 
-        log.info("Constructor with name={} debug={}".format(name, debug))
+        log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
-        self.name = None
-        super(Vyos_agent,self).__init__(name=name, debug=debug)
+        self.name = name 
+        self.conn = conn
+        self.dryrun = dryrun
+        #super(Vyos_agent,self).__init__(name=name, conn=conn, dryrun=dryrun, debug=debug)
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")
