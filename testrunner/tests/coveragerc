@@ -6,6 +6,9 @@ omit =
     # Omit packages which are not ours
     /usr/lib/python3/dist-packages/*
 
+    # Omit site-packages
+	*/site-packages/*
+ 
     # omit our ssh package
     ../ssh/*
 

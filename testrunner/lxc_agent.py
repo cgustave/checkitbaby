@@ -5,6 +5,7 @@ Created on Feb 12, 2019
 """
 import logging as log
 from agent import Agent
+from netcontrol.ssh.ssh import Ssh 
 import re
 
 class Lxc_agent(Agent):
@@ -41,9 +42,11 @@ class Lxc_agent(Agent):
         self.path = None
         self.playbook = None
         self.run = None
+        self.agent = None
 
         # Private attributs
         self._connected = False    # ssh connection state with the agent 
+        self._ssh = None
        
     def process(self, line=""):
         """
@@ -98,7 +101,26 @@ class Lxc_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            self.connect()
+            
 
+    def connect(self):
+        """
+        Connect to agent
+        """
+        log.info("Enter")
+        ip = self.agent['ip']
+        port = self.agent['port']
+        login = self.agent['login']
+        password = self.agent['password']
+        ssh_key_file = self.agent['ssh_key_file']
+        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
+
+        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+        try:
+           self._ssh.connect()
+        except:
+            log.error("Connection to agent {} failed".format(self.name))
 
     def cmd_connect(self, line):
         """

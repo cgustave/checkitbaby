@@ -29,7 +29,7 @@ class TestrunnerTestCase(unittest.TestCase):
     def test_loading(self):
 
         # Load the given playbook testcases 
-        self.tr.load_playbook(name="myPlaybook")
+        self.tr.load_playbook(name="test")
 
         # Disable / Enable some of the testcases
         self.tr.playbook.testcases[0].disable()
@@ -47,10 +47,8 @@ class TestrunnerTestCase(unittest.TestCase):
 
 
     def test_run_playbook(self):
-        self.tr.load_playbook(name="myPlaybook")
+        self.tr.load_playbook(name="test")
         self.tr.run_all_testcases(run=1)
-
-
 
 if __name__ == '__main__':
     unittest.main()

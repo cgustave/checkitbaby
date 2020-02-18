@@ -1,0 +1,5 @@
+srv-1:1 open tcp 9123
+srv-1:1 mark "server ready"
+
+clt-1:1 connect tcp 127.0.0.1 9123
+clt-1:1 send "alice"

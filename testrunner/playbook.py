@@ -206,6 +206,7 @@ class Playbook(object):
             self.agents_connections[agent_name][agent_conn].path = self.path
             self.agents_connections[agent_name][agent_conn].playbook = self.name
             self.agents_connections[agent_name][agent_conn].run = self.run
+            self.agents_connections[agent_name][agent_conn].agent = self.agents[agent_name]
 
             self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=line)

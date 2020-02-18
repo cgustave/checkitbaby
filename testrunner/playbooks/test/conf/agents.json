@@ -1,0 +1,19 @@
+{
+	"clt-1" : {
+				"type" : "lxc",
+				"ip" : "127.0.0.1",
+				"port" : 22,
+				"login" : "cgustave",
+				"password" : "",
+				"ssh_key_file" : "/home/cgustave/.ssh/id_rsa"
+	},
+
+	"srv-1" : {
+				"type" : "lxc",
+				"ip" : "127.0.0.1",
+				"port" : 22,
+				"login" : "cgustave",
+				"password" : "",
+				"ssh_key_file" : "/home/cgustave/.ssh/id_rsa"
+			  }
+}
