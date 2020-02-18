@@ -9,6 +9,10 @@ import os
 import re
 import json
 from testcase import Testcase
+from lxc_agent import Lxc_agent
+from vyos_agent import Vyos_agent
+from fortipoc_agent import Fortipoc_agent
+from fortigate_agent import Fortigate_agent
 
 class Playbook(object):
     """
@@ -88,7 +92,7 @@ class Playbook(object):
 
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
-                                      # ex : {'lxc1' : { '1' : SSH1, '2' : SSH2} }
+                                      # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
 
     def register(self):
         """
@@ -178,22 +182,78 @@ class Playbook(object):
             (agent_name, agent_type, agent_conn) = self._get_agent_from_tc_line(id=testcase.id, line=line)
             log.debug("agent_name={} agent_type={} agent_conn={}".format(agent_name, agent_type, agent_conn))
 
-            # Manage the connection to agent : if connection is not already open,
-            # then open it
-          
-            if not agent_name in self.agents_connections:
-               log.debug("create a new agent={} in our agents_connections dictionnary".format(agent_name))
-               self.agents_connections[agent_name] = {}
-
-            if not agent_conn in self.agents_connections[agent_name]:
-                log.debug("Create a new connection conn={} for agent={}".format(agent_conn,agent_name))
-                # TBD 
-
+            # Create new agent connection if needed
+            if self._create_agent_conn(name=agent_name, type=agent_type, conn=agent_conn):
+                log.debug("Agent created")
             else:
-                log.debug("Connection conn={} already exists".format(agent_conn))
+                log.debug("Agent already existing")
+
+            # Double check
+            if agent_name in self.agents_connections:
+                log.debug("Agent check OK : agent_name={} Agents keys={}".format(agent_name, self.agents_connections.keys()))
+
+            if agent_conn in self.agents_connections[agent_name]:
+                log.debug("Agent connection check ok : agent_name={} dict={}".format(agent_name, self.agents_connections[agent_name].keys()))
+            else:
+                log.error("ERROR: Agent connection {}:{} does not exists".format(agent_name, agent_conn))
+                raise SystemExit 
+
+            # Proceed with Agent specific command line
+            self.agents_connections[agent_name][agent_conn].process(line=line)
 
 
     ### PRIVATE METHODS ###
+
+    def _create_agent_conn(self, name="", type="", conn=None):
+        """
+        Creates a new agent object in our agent list 
+        Returns True if connection creation was required
+        Return False if connection was already existing 
+        """
+        log.info("Enter with name={} type={} conn={}".format(name, type, conn))
+
+        result = False
+
+        # step 1: If agent is not in our dictionary, create it
+          
+        if not name in self.agents_connections:
+            log.debug("Create a new agent={} in our agents_connections dictionnary".format(name))
+            self.agents_connections[name] = {}
+        else: 
+            log.debug("agent={} is already in our list".format(name))
+
+        # step 2 : If agent object is not created for this connection id, create it
+
+        if not conn in self.agents_connections[name]:
+            log.debug("Create a new connection {}:{} type={}".format(name, conn, type))
+            result = True
+
+            if type == "lxc":
+                self.agents_connections[name][conn] = Lxc_agent (name=name, debug=self.debug)
+            elif type == "vyos":
+                self.agents_connections[name][conn] = Vyos_agent (name=name, debug=self.debug)
+            elif type == "fortipoc":
+                self.agents_connections[name][conn] = Fortipoc_agent (name=name, debug=self.debug)
+            elif type == "fortigate":
+                self.agents_connections[name][conn] = Fortigate_agent (name=name, debug=self.debug)
+            else:
+                print ("Error: undefined type for agent {}".format(type))
+                raise SystemExit
+        else:
+            log.debug("Connection to {}:{} already exists".format(name, conn))
+
+        return result
+
+
+    def get_agent_type(self, name=""):
+        """
+        Requirement : Agents should have been loaded
+        Returns the type of the agent called 'name'
+        """
+        log.info("Enter with name={}".format(name))
+        type = self.agents[name]['type']
+        log.debug("name={} type={}".format(name, type))
+        return type
 
     def _get_agent_from_tc_line(self, id=None, line=""):
         """
@@ -212,7 +272,7 @@ class Playbook(object):
             log.debug("Found id={} agent={} conn={}".format(id, agent_name, agent_conn))
 
             # Get agent type from agent file
-            agent_type = self.agents[agent_name]['type']
+            agent_type = self.get_agent_type(name=agent_name) 
             log.debug("Found corresponding type={}".format(agent_type))
 
         else:

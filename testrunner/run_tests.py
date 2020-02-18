@@ -2,7 +2,8 @@
 
 NAME=testrunner
 
-rm -f debug.log
+echo "***" > debug.log
+echo "" >> debug.log
 
 echo
 echo "======================================================================"
@@ -34,4 +35,4 @@ echo "= DOCUMENTATION                                                      ="
 echo "======================================================================"
 python3 -m pydoc "$NAME"  > README.md
 
-
+echo "" >> debug.log

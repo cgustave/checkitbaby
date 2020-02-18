@@ -37,8 +37,7 @@ class Testcase(object):
             self.debug = True
             log.basicConfig(level='DEBUG')
 
-        log.info("Constructor with id={} name={} playbook={} path={} \
-                 filename={} debug={}".format(id, name, playbook, path, filename, debug))
+        log.info("Constructor with id={} name={} playbook={} path={} filename={} debug={}".format(id, name, playbook, path, filename, debug))
 
         # Attributs
         self.id = id
