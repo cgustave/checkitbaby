@@ -42,7 +42,8 @@ class Lxc_agent(Agent):
         self.path = None
         self.playbook = None
         self.run = None
-        self.agent = None
+        self.agent = None        # name, id ... and all info for the agent itself
+        self.testcase = None     # For which testcase id the agent was created
 
         # Private attributs
         self._connected = False    # ssh connection state with the agent 
@@ -86,6 +87,7 @@ class Lxc_agent(Agent):
         """
         Processing for command "open"
         Opens a server udp or tcp connection 
+        ex : srv-1:1 open tcp 9123
         """
         log.info("Enter with line={}".format(line))
 
@@ -93,7 +95,7 @@ class Lxc_agent(Agent):
         if match:
             proto = match.group('proto')
             port = match.group('port')
-            log.debug("proto={} port={}".format(proto,port))
+            log.debug("proto={} port={}".format(proto, port))
         else:
             log.error("Could not extract proto and port from open command on line={}".format(line))
             raise SystemExit
@@ -102,45 +104,91 @@ class Lxc_agent(Agent):
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
             self.connect()
+
+        # Open connection on agent
+        cmd = "nc -l"
+        if proto=="udp":
+            cmd = cmd+" -u"
+
+        cmd = cmd+" "+port+"\n"
+        log.debug("sending cmd={}".format(cmd))
+        self._ssh.channel_send(cmd)
+        self._ssh.channel_read()
+       
             
-
-    def connect(self):
-        """
-        Connect to agent
-        """
-        log.info("Enter")
-        ip = self.agent['ip']
-        port = self.agent['port']
-        login = self.agent['login']
-        password = self.agent['password']
-        ssh_key_file = self.agent['ssh_key_file']
-        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
-
-        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
-        try:
-           self._ssh.connect()
-        except:
-            log.error("Connection to agent {} failed".format(self.name))
 
     def cmd_connect(self, line):
         """
         Processing for command "connect"
+        Connect as a client to a remote udp or tcp server
+        Requirement : server should be listing (call cmd_open)
+        ex : clt-1:1 connect tcp 127.0.0.1 9123
         """
         log.info("Enter with line={}".format(line))
+
+        match = re.search("(?:connect(\s|\t)+)(?P<proto>tcp|udp)(?:(\s|\t)+)(?P<ip>\S+)(?:(\s|\t)+)(?P<port>\d+)",line) 
+        if match:
+            proto = match.group('proto')
+            ip = match.group('ip')
+            port = match.group('port')
+            log.debug("proto={} ip={} port={}".format(proto, ip, port))
+        else:
+            log.error("Could not extract proto, ip and port from connect command on line={}".format(line))
+            raise SystemExit
+
+        # Connect to agent if not already connected
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            self.connect()
+
+        # Connection to server
+        cmd = "nc "
+        if proto=="udp":
+            cmd = cmd+" -u"
+      
+        cmd = cmd+" "+ip+" "+port+"\n" 
+        log.debug("sending cmd={}".format(cmd))
+        self._ssh.channel_send(cmd)
+        self._ssh.channel_read()
 
 
     def cmd_send(self, line):
         """
         Processing for command "send"
+        Sending data through an opened connection (udp or tcp)
+        Requirement : ssh channel should have been opened
+        Note : if nc is used, a \n is required to send data
         """
         log.info("Enter with line={}".format(line))
 
+        match = re.search("(?:send(\s|\t)+\")(?P<data>.+)(?:\")", line)
+        if match:
+            data = match.group('data')
+            log.debug("data={}".format(data))
+            data = data+"\n"
+            self._ssh.channel_send(data)
+            self._ssh.channel_read()
+        else:
+            log.error("Could not recognize send command syntax")
+            raise SystemExit
 
+        
     def cmd_check(self, line):
         """
         Processing for command "check"
+        Ex : clt-1:0 check [check_name] "keyword" 
+        Ex : clt-1:0 check [check_name] "keyword" since "server ready"
+        Opens a separated ssh connection conn=0 to search in the tracefile
+        if the keyword could be found.
+        In interactive mode, do not use the same channel as the receiving one
+        for checking, always using :0 for check is a good idea.
+        Optionaly if 'since "mark"' is added, restrict the search in the
+        tracefile after the mark
+        Return True if keyword is found otherwise False
         """
         log.info("Enter with line={}".format(line))
+
+
 
 
     def cmd_close(self, line):
@@ -148,6 +196,9 @@ class Lxc_agent(Agent):
         Processing for command "close"
         """
         log.info("Enter with line={}".format(line))
+        
+        self._ssh.close()
+
 
 
 if __name__ == '__main__': #pragma: no cover

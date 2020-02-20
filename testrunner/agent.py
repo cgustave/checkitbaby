@@ -6,6 +6,7 @@ Created on Feb 12, 2019
 import logging as log
 import re
 from datetime import datetime
+from netcontrol.ssh.ssh import Ssh
 
 class Agent(object):
     """
@@ -57,6 +58,10 @@ class Agent(object):
 
     def process_mark(self, line=""):
         """
+        NOTE : This method works but may generate a concurrent write to the
+        tracefile (here we open the file from writing separately.
+        Instead, we will use the Ssh module marking command to have a unique
+        writer in the trace file
         Process command 'mark' generic to all agents
         Writes a standardized mark on the agent log file
         """
@@ -67,19 +72,25 @@ class Agent(object):
         if match:
             message = match.group('message')
             log.debug("message={}".format(message))
-            localtime = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
-            mark = "\n### "+localtime+" - "+message+" ###\n"
      
             filename = self.get_trace_filename()
 
             if not self.dryrun:
-                log.debug("marking mark={} filename={}".format(mark, filename))
-                f = open(filename, "a")
-                f.write(mark)
-                f.close()
+                log.debug("marking message={} to filename={}".format(message, filename))
+
+                # The method below would work but it may generate a concurrent
+                #write to the tracefile. Instead, we will use the Ssh module
+                #marking command to have a unique writer in the tracefile
+                # localtime = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
+                # mark = "\n### "+localtime+" - "+message+" ###\n"
+                #f = open(filename, "a")
+                #f.write(mark)
+                #f.close()
+
+                self._ssh.trace_mark(message)
 
             else:
-                log.debug("dry-run - fake marking : {}".format(mark))
+                log.debug("dry-run - fake marking : {}".format(message))
 
         else:
            log.debug("could not extract mark message")
@@ -96,16 +107,41 @@ class Agent(object):
     def get_trace_filename(self):
         """
         Returns the trace file name made of path, playbook name, run id, agent name and connection id
-        Ex : run=1 agent_name='lxc-1' connection_id='1'
-             filename should be './playbooks/myPlaybook/runs/1/lxc-1_1.log
+        Ex : run=1 testcase=2 agent_name='lxc-1' connection_id='3'
+             filename should be './playbooks/myPlaybook/runs/1/testcases/2/lxc-1_3.log
         """
         log.info("Enter")
             
-        file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/"
+        file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/testcases/"
         file_name = str(self.name)+"_"+str(self.conn)+".log"
-        filename = file_path+file_name
-        log.debug("filename={}".format(filename))
+        testcase = self.testcase
+        filename = file_path+testcase+"/"+file_name
+        log.debug("tracefile name={}".format(filename))
         return(filename)
+
+
+    def connect(self):
+        """
+        Connect to agent without sending any command
+        This opens the ssh channel for  data exchange
+        """
+        log.info("Enter")
+        ip = self.agent['ip']
+        port = self.agent['port']
+        login = self.agent['login']
+        password = self.agent['password']
+        ssh_key_file = self.agent['ssh_key_file']
+        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
+
+        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+        tracefile_name = self.get_trace_filename()
+        self._ssh.trace_open(filename=tracefile_name)
+
+        try:
+           self._ssh.connect()
+        except:
+            log.error("Connection to agent {} failed".format(self.name))
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

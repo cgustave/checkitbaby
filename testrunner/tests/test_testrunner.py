@@ -5,10 +5,8 @@ Created on Feb 14, 2020
 @author: cgustave
 '''
 import logging as log
-import json
 import unittest
 from testrunner import Testrunner
-from playbook import Playbook
 
 # create logger
 log.basicConfig(
