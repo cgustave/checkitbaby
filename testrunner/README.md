@@ -59,13 +59,13 @@ CLASSES
      |  load_playbook(self, name='')
      |      Loads a playbook as a first element of list self.playbook
      |  
-     |  report(self, run='1')
+     |  run_all_testcases(self, run=None)
+     |      Runs the full playbook testcases on the given run id
+     |  
+     |  run_report(self, run='1')
      |      Requirement : a minimum of a testcase should have been run on the given run id
      |      Provide a report from the last testcases that ran in run 1
      |      Return: Report in json format
-     |  
-     |  run_all_testcases(self, run=None)
-     |      Runs the full playbook testcases on the given run id
      |  
      |  run_testcase(self, run, id)
      |      Runs a single testcase specified by its id

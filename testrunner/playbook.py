@@ -8,6 +8,7 @@ import logging as log
 import os 
 import re
 import json
+from pathlib import Path
 from testcase import Testcase
 from lxc_agent import Lxc_agent
 from vyos_agent import Vyos_agent
@@ -45,8 +46,8 @@ class Playbook(object):
     Runs : 
     A 'run' is a directory containing all traces from the last running playbook
     testcases. To keep track of several 'runs', directory has sub 'run'
-    directories numbered 1,2,3,4... Before running a playbook, user should tell
-    on which run id it should be run.
+    directories numbered 001,002,003,004 so they can be sorted alphatically.
+    Before running a playbook, user should tell on which run id it should be run.
       ex : /fortipoc/playbooks/advpn/run/1
 
     Reports :
@@ -55,14 +56,11 @@ class Playbook(object):
        in the run/run_id subdirectory.  One report per testcase name : "<id>_report.json"
        This report contains feedback from all the different checks and gets in
        from the testcases.
-         ex : /fortipoc/playbooks/advpn/run/1/1_report.json
+         ex : /fortipoc/playbooks/advpn/run/1/001_report.json
 
        * Summary report :
-       Once all testcases from the workbook have run, it is possible to
-       generate a summary report for all testcases compiling the general
-       feedback from each testcase (without getting to the details of all
-       checks done in the testcase.
-         ex : /fortipoc/playbooks/advpn/run/1/Summary_report.json
+       When testcases are run, a report file is kept updated.
+         ex : /fortipoc/playbooks/advpn/run/1/report.json
     """
 
     def __init__(self, name='', path='', run=1, debug=False):
@@ -95,6 +93,9 @@ class Playbook(object):
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
         self.dryrun = False           # Used for scenario syntax verification only (no connection to agent)
+
+        self.report = {}              # Playbook test report, key is testcase id
+        self.report_summary = True    # Overall report summary, to be updated after each testcase
 
 
     def register(self):
@@ -158,7 +159,6 @@ class Playbook(object):
 
         return result
 
-
     def run_testcases(self):
         """
         Requirements : playbook should have been registered (and ideally verify_agents)
@@ -167,13 +167,15 @@ class Playbook(object):
         log.info("Enter")
         for tc in self.testcases:
             log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
-            self.process_testcase(testcase=tc)
+            self.run_testcase(testcase=tc)
 
-    def process_testcase(self, testcase=None):
+    def run_testcase(self, testcase=None):
         """
-        Processes all statements from a given testcase :
+        Run one testcase.
         Process each line of the scenario, for each line :
-            Extract the agent name, type and connection
+          - extract agent name and connection, create a new agent if first time seen
+          - call generic processing (same for all agent), from agent.py
+          - call agent specific processing
         """
         log.info("Enter")
         log.debug("Testcase id={} name={}".format(testcase.id, testcase.name))
@@ -207,9 +209,16 @@ class Playbook(object):
             self.agents_connections[agent_name][agent_conn].playbook = self.name
             self.agents_connections[agent_name][agent_conn].run = self.run
             self.agents_connections[agent_name][agent_conn].testcase = testcase.id 
+
             # Tell agent who it is and for which testcase it has been created 
             self.agents_connections[agent_name][agent_conn].agent = self.agents[agent_name]
 
+            # Provide report for update
+            self.agents_connections[agent_name][agent_conn].report = self.report 
+   
+            self._create_testcase_run_file_structure(testcase_id=testcase.id)
+
+            # Run generic methods (in agent.py) and specific ones
             self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=line)
 
@@ -256,7 +265,6 @@ class Playbook(object):
 
         return result
 
-
     def get_agent_type(self, name=""):
         """
         Requirement : Agents should have been loaded
@@ -290,14 +298,7 @@ class Playbook(object):
         else:
             log.debug("Could not find agent name and connection id={} line={}".format(id, line))
             print("warning: testcase id={} line={} : can't extract agent name and connection id (format NAME:ID)".format(id, line))
-
-
         return (agent_name, agent_type, agent_conn)
-
-
-
-
-
 
     def _register_testcase(self, id, name, filename):
         """
@@ -344,6 +345,35 @@ class Playbook(object):
 
         with open(file, encoding='utf-8') as F:
             self.agents = json.loads(F.read())
+
+    def _create_testcase_run_file_structure(self, testcase_id=None):
+        """
+        Create the required file structure for a run
+        ex : playbook_path/PLAYBOOK_NAME/runs/ID
+        ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases 
+        ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases/TESTCASE_ID
+        Requirement: run id, playbook name
+        """
+        log.info("Enter with testcase_id={}".format(testcase_id))
+
+        if not testcase_id:
+            log.error("testcase_id is required")
+            raise SystemExit
+
+        if not self.path:
+            log.error("playbook path is required")
+            raise SystemExit
+
+        if not self.name:
+            log.error("playbook name is required")
+            raise SystemExit
+
+        if not self.run:
+            log.error("run id is required")
+            raise SystemExit
+        
+        path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
+        log.debug("Create if needed path={}".format(path))
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

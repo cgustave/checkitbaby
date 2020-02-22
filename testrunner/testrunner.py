@@ -109,14 +109,14 @@ class Testrunner(object):
         """
         log.info("Enter with run={} id={}".format(run, id))
 
-    def report(self, run='1'):
+    def run_report(self, run='1'):
         """
         Requirement : a minimum of a testcase should have been run on the given run id
         Provide a report from the last testcases that ran in run 1
         Return: Report in json format
         """
         log.info("Enter with run={}".format(run))
-        return json.dump(self.report, indent=4)
+        return json.dumps(self.playbook.report, indent=4)
 
 
 

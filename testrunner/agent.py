@@ -5,7 +5,7 @@ Created on Feb 12, 2019
 """
 import logging as log
 import re
-from datetime import datetime
+import json
 from netcontrol.ssh.ssh import Ssh
 
 class Agent(object):
@@ -72,29 +72,13 @@ class Agent(object):
         if match:
             message = match.group('message')
             log.debug("message={}".format(message))
-     
-            filename = self.get_trace_filename()
-
             if not self.dryrun:
-                log.debug("marking message={} to filename={}".format(message, filename))
-
-                # The method below would work but it may generate a concurrent
-                #write to the tracefile. Instead, we will use the Ssh module
-                #marking command to have a unique writer in the tracefile
-                # localtime = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
-                # mark = "\n### "+localtime+" - "+message+" ###\n"
-                #f = open(filename, "a")
-                #f.write(mark)
-                #f.close()
-
+                log.debug("marking message={}".format(message))
                 self._ssh.trace_mark(message)
-
             else:
                 log.debug("dry-run - fake marking : {}".format(message))
-
         else:
            log.debug("could not extract mark message")
-
 
     def process(self, line=""):
         """
@@ -103,22 +87,79 @@ class Agent(object):
         """
         log.info("Enter (catch all) with line={}".format(line))
 
-
-    def get_trace_filename(self):
+    def get_filename(self, type='trace'):
         """
-        Returns the trace file name made of path, playbook name, run id, agent name and connection id
+        Returns different type of filename based on of path, playbook name, run id, agent name and connection id
+
+        * type='trace' : return a trace_file name
         Ex : run=1 testcase=2 agent_name='lxc-1' connection_id='3'
              filename should be './playbooks/myPlaybook/runs/1/testcases/2/lxc-1_3.log
         """
-        log.info("Enter")
+        log.info("Enter with type={}".format(type))
             
         file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/testcases/"
-        file_name = str(self.name)+"_"+str(self.conn)+".log"
+        if type == 'trace':
+           file_name = str(self.name)+"_"+str(self.conn)+".log"
+        elif type == 'report':
+           file_name = "report.json"
+        else:
+           log.error("unknown type={}".format(type))
+           raise SystemExit
+           
         testcase = self.testcase
         filename = file_path+testcase+"/"+file_name
-        log.debug("tracefile name={}".format(filename))
+        log.debug("type={} filename={}".format(type, filename))
         return(filename)
 
+    def add_report_entry(self, check="", result=""):
+        """
+        Adds an entry in the report.
+        For a check entry, call with check=check_name, result=pass|fail
+        Update the testcase generic result
+        """
+        log.info("Enter with check={} result={}".format(check, result))
+
+        # Create playbook result if needed
+        if 'result' not in self.report:
+            self.report['result'] = True
+
+        # Create testcase in report if needed
+        if 'testcases' not in self.report:
+            self.report['testcases'] = {}
+
+        if self.testcase not in self.report['testcases']:
+            self.report['testcases'][self.testcase]={}
+
+        # Create testcase generic result if needed
+        if 'result' not in self.report['testcases'][self.testcase]:
+            self.report['testcases'][self.testcase]['result'] = True
+
+        # Create check group if needed
+        if 'check' not in self.report['testcases'][self.testcase]:
+            self.report['testcases'][self.testcase]['check'] = {}
+
+        # Add check report entry
+        if check:
+            log.debug("Adding check={} result={} in testcase={}".format(check, result, self.testcase))
+            self.report['testcases'][self.testcase]['check'][check] = result
+
+            # Update playbook result
+            pr = self.report['result'] and result
+            self.report['result'] = pr
+            log.debug("Playbook result updated with result={}".format(pr))
+
+            # Update testcase result
+            tr = self.report['testcases'][self.testcase]['result'] and result
+            self.report['testcases'][self.testcase]['result'] = tr
+            log.debug("Testcase result updated with result={}".format(tr))
+
+        # Write report file
+        filename = self.get_filename(type='report')
+        log.debug("Writing report filename={}".format(filename))
+ 
+        f = open (filename, "w")
+        f.write(json.dumps(self.report, indent=4))
+        f.close()
 
     def connect(self):
         """
@@ -134,7 +175,7 @@ class Agent(object):
         log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
 
         self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
-        tracefile_name = self.get_trace_filename()
+        tracefile_name = self.get_filename(type='trace')
         self._ssh.trace_open(filename=tracefile_name)
 
         try:

@@ -47,6 +47,7 @@ class TestrunnerTestCase(unittest.TestCase):
     def test_run_playbook(self):
         self.tr.load_playbook(name="test")
         self.tr.run_all_testcases(run=1)
+        print("report={}".format(self.tr.run_report()))
 
 if __name__ == '__main__':
     unittest.main()

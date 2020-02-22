@@ -2,24 +2,22 @@
 """
 Created on Feb 12, 2019
 @author: cgustave
-
 """
 
 import logging as log
 import re
-
 
 class Testcase(object):
     """
     Testcase class
     Test cases are defined within a playbook directory inside dir 'testcases'
     They are organised in multiple files, one testcase per file.
-    Filename format is "<id>_<name>.txt" 
-      ex : /fortipoc/playbooks/advpn/testcases/1_environment.txt
-      ex : /fortipoc/playbooks/advpn/testcases/2_connectivity.txt
-      ex : /fortipoc/playbooks/advpn/testcases/3_ipsec_tunnels.txt
-      ex : /fortipoc/playbooks/advpn/testcases/4_routing.txt
-
+    Filename format is "ID_NAME.txt", ID should be numbered with 3 digits to
+    allow alphabetical sorting 
+      ex : /fortipoc/playbooks/advpn/testcases/001_environment.txt
+      ex : /fortipoc/playbooks/advpn/testcases/002_connectivity.txt
+      ex : /fortipoc/playbooks/advpn/testcases/003_ipsec_tunnels.txt
+      ex : /fortipoc/playbooks/advpn/testcases/004_routing.txt
     """
 
     def __init__(self, id='', name='', playbook='', path='', filename='', debug=False):
@@ -55,7 +53,7 @@ class Testcase(object):
 
     def load_scenario(self):
         """
-        Load the testcase statements
+        Load the testcase statements in memory
         """
         log.info("Enter")
         filename = self.path+"/"+self.playbook+"/testcases/"+self.filename
@@ -81,7 +79,6 @@ class Testcase(object):
 
         except IOError as e:
             log.debug("I/O error filename={} error={}".format(filename,e.strerror))
-
 
     def disable(self):
         """

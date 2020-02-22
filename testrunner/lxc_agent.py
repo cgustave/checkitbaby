@@ -5,7 +5,6 @@ Created on Feb 12, 2019
 """
 import logging as log
 from agent import Agent
-from netcontrol.ssh.ssh import Ssh 
 import re
 
 class Lxc_agent(Agent):
@@ -44,6 +43,7 @@ class Lxc_agent(Agent):
         self.run = None
         self.agent = None        # name, id ... and all info for the agent itself
         self.testcase = None     # For which testcase id the agent was created
+        self.report = None       # Testcase report (provided from Workbook)
 
         # Private attributs
         self._connected = False    # ssh connection state with the agent 
@@ -82,7 +82,6 @@ class Lxc_agent(Agent):
         else:
             log.warning("command {} is unknown".format(command))
 
- 
     def cmd_open(self, line):
         """
         Processing for command "open"
@@ -114,8 +113,6 @@ class Lxc_agent(Agent):
         log.debug("sending cmd={}".format(cmd))
         self._ssh.channel_send(cmd)
         self._ssh.channel_read()
-       
-            
 
     def cmd_connect(self, line):
         """
@@ -150,7 +147,6 @@ class Lxc_agent(Agent):
         log.debug("sending cmd={}".format(cmd))
         self._ssh.channel_send(cmd)
         self._ssh.channel_read()
-
 
     def cmd_send(self, line):
         """
@@ -196,6 +192,7 @@ class Lxc_agent(Agent):
             if match2:
                 mark = match2.group('mark')
                 log.debug("since mark={}".format(mark))
+
             result = self._search_pattern_tracefile(pattern=pattern, mark=mark)
 
         else :
@@ -204,7 +201,18 @@ class Lxc_agent(Agent):
 
         log.debug("Result={}".format(result))
 
+        # Writing testcase result in the playbook report
+        self.add_report_entry(check=name, result=result)
         return result
+
+    def cmd_close(self, line):
+        """
+        Processing for command "close"
+        """
+        log.info("Enter with line={}".format(line))
+        
+        if self._ssh:
+            self._ssh.close()
 
     def _search_pattern_tracefile(self, pattern="", mark=""):
         """
@@ -216,7 +224,7 @@ class Lxc_agent(Agent):
         log.info("Enter with pattern={} mark={}-".format(pattern, mark))
         result = False
 
-        fname = self.get_trace_filename()
+        fname = self.get_filename(type='trace')
         log.debug("tracefile={}".format(fname))
 
         try :
@@ -237,7 +245,7 @@ class Lxc_agent(Agent):
             line = line.strip()
             print("mark - line={}".format(line))
             if flag:
-                match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark, line)
+                match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
                 if match:
                     log.debug("Found mark={}".format(mark))
                     flag = False
@@ -253,23 +261,6 @@ class Lxc_agent(Agent):
         fh.close()
         log.debug("result={}".format(result))
         return result
-
-
-
-
-
-
-
-    def cmd_close(self, line):
-        """
-        Processing for command "close"
-        """
-        log.info("Enter with line={}".format(line))
-        
-        if self._ssh:
-            self._ssh.close()
-
-
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")
