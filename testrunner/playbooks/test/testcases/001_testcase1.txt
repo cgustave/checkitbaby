@@ -8,5 +8,13 @@ srv-1:1 check [origin] "alice" since "server ready"
 srv-1:1 send "bob"
 clt-1:1 check [reply] "bob"
 
+clt-1:2 ping [pass_conntest] 8.8.8.8 maxloss 50 
+clt-1:2 ping [fail_conntest] 10.10.10.10 maxloss 50
+
+clt-1:2 ping [fail_delay_conntest] 8.8.8.8 maxdelay 10 
+clt-1:2 ping [pass_delay_conntest] 8.8.8.8 maxdelay 100 
+clt-1:2 ping [fail_delay_conntest] 10.10.10.10 maxdelay 50
+
 clt-1:1 close
 srv-1:1 close
+

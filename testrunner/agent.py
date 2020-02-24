@@ -6,6 +6,8 @@ Created on Feb 12, 2019
 import logging as log
 import re
 import json
+import string
+import random
 from netcontrol.ssh.ssh import Ssh
 
 class Agent(object):
@@ -111,13 +113,13 @@ class Agent(object):
         log.debug("type={} filename={}".format(type, filename))
         return(filename)
 
-    def add_report_entry(self, check="", result=""):
+    def add_report_entry(self, check="", get="", result=""):
         """
         Adds an entry in the report.
         For a check entry, call with check=check_name, result=pass|fail
         Update the testcase generic result
         """
-        log.info("Enter with check={} result={}".format(check, result))
+        log.info("Enter with check={} get={} result={}".format(check, get, result))
 
         # Create playbook result if needed
         if 'result' not in self.report:
@@ -138,6 +140,10 @@ class Agent(object):
         if 'check' not in self.report['testcases'][self.testcase]:
             self.report['testcases'][self.testcase]['check'] = {}
 
+        # Create get group if needed
+        if 'get' not in self.report['testcases'][self.testcase]:
+            self.report['testcases'][self.testcase]['get'] = {}
+
         # Add check report entry
         if check:
             log.debug("Adding check={} result={} in testcase={}".format(check, result, self.testcase))
@@ -152,6 +158,11 @@ class Agent(object):
             tr = self.report['testcases'][self.testcase]['result'] and result
             self.report['testcases'][self.testcase]['result'] = tr
             log.debug("Testcase result updated with result={}".format(tr))
+
+        # Add get report entry
+        if get:
+            log.debug("Adding get={} result={} in testcase={}".format(get, result, self.testcase))
+            self.report['testcases'][self.testcase]['get'][get] = result
 
         # Write report file
         filename = self.get_filename(type='report')
@@ -183,6 +194,13 @@ class Agent(object):
         except:
             log.error("Connection to agent {} failed".format(self.name))
 
+    def random_string(self, length=8):
+        """
+        Returns a random string
+        """
+        log.info("Enter with length={}".format(length))
+        s = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+        return s
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

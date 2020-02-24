@@ -6,6 +6,7 @@ Created on Feb 12, 2019
 import logging as log
 from agent import Agent
 import re
+import time
 
 class Lxc_agent(Agent):
     """
@@ -48,6 +49,14 @@ class Lxc_agent(Agent):
         # Private attributs
         self._connected = False    # ssh connection state with the agent 
         self._ssh = None
+
+    def __del__(self):
+        """
+        Desctructor to close opened connection to agent when exiting
+        """
+        log.info("Enter")
+        if self._ssh:
+            self._ssh.close()
        
     def process(self, line=""):
         """
@@ -79,6 +88,8 @@ class Lxc_agent(Agent):
            self.cmd_check(line) 
         elif command == 'close':
            self.cmd_close(line)
+        elif command == 'ping':
+            self.cmd_ping(line)
         else:
             log.warning("command {} is unknown".format(command))
 
@@ -193,7 +204,8 @@ class Lxc_agent(Agent):
                 mark = match2.group('mark')
                 log.debug("since mark={}".format(mark))
 
-            result = self._search_pattern_tracefile(pattern=pattern, mark=mark)
+            sp = self.search_pattern_tracefile(pattern=pattern, mark=mark)
+            result = sp['result']
 
         else :
             log.error("Could not recognize check command syntax in line={}".format(line))
@@ -214,15 +226,118 @@ class Lxc_agent(Agent):
         if self._ssh:
             self._ssh.close()
 
-    def _search_pattern_tracefile(self, pattern="", mark=""):
+    def cmd_ping(self, line):
+        """
+        Connectivity check
+        Reports packet loss and delays
+        Results (average delay and loss) are reported in 'ping' report section
+        Note : using -A (adaptative by default)
+        ex : ping [con_test] 10.0.2.1               (always pass)
+        ex : ping [con_test] 10.0.2.1 maxloss 50    (pass if loss < 50%)
+        Return: true|false depending if pass criteria are matched
+        """
+        log.info("Enter with line=line")
+        count = 5 
+        loss = 100
+        delay = 999
+        result = True
+
+        match = re.search("ping(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?P<host>[A-Za-z0-9_\.-]+)", line)
+        if match:
+            name = match.group('name')
+            host = match.group('host')
+            log.debug("name={} host={}".format(name, host))
+        else:
+            log.error("Could not recognize ping command syntax in line={}".format(line))
+            raise SystemExit
+
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            self.connect()
+      
+        # Random mark for analysis
+        reference = self.random_string(length=8)
+        self._ssh.trace_mark(reference)
+
+        # ping
+        data = "ping -n -A -w 2 -c "+str(count)+" -W 2 "
+        data = data + host
+        data = data + "\n"
+        log.debug("data={}".format(data))
+        # look for the prompt on a slow command (5 seconds)
+        maxround = self._ssh.maxround
+        self._ssh.maxround = 50
+        self._ssh.shell_send([data])
+        self._ssh.maxround = maxround
+       
+        # Get loss % : Process result since mark
+        sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
+        loss_line = sp['line']
+        log.debug("Found loss_line={}".format(loss_line))
+
+        # 5 packets transmitted, 5 received, 0% packet loss, time 803ms 
+        match = re.search("\s(?P<loss>\d+)%\spacket\sloss", loss_line)
+        if match:
+            loss = match.group('loss')
+            log.debug("loss={}".format(loss))
+
+            # Check pass condition if any
+            log.debug("line={}".format(line))
+            match_maxloss = re.search("maxloss\s+(?P<maxloss>\d+)", line)
+            if match_maxloss:
+                maxloss = match_maxloss.group('maxloss')
+                log.debug("maxloss={}".format(maxloss))
+                if int(loss) > int(maxloss):
+                    log.debug("Fail maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
+                    result = False
+                else:
+                    log.debug("Pass maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
+
+        # Get avg rtt
+        if int(loss) != 100:
+            # rtt min/avg/max/mdev = 27.277/28.111/30.203/1.089 ms, ipg/ewma 200.766/28.137 ms
+            sp2 = self.search_pattern_tracefile(mark=reference, pattern='rtt min/avg/max')
+            delay_line = sp2['line']
+            log.debug("Found delay_line={}".format(delay_line))
+            match2 = re.search("\s=\s[0-9\.]+/(?P<delay>[0-9\.]+)/", delay_line)
+            if match2:
+                delay = match2.group('delay')
+                log.debug("delay={}".format(delay))
+
+                # Check maxdelay pass condition if any
+                log.debug("line={}".format(line))
+                match_maxdelay = re.search("maxdelay\s+(?P<maxdelay>\d+)", line)
+                if match_maxdelay:
+                    maxdelay = match_maxdelay.group('maxdelay')
+                    log.debug("maxdelay={}".format(maxdelay))
+                    if float(delay) > float(maxdelay):
+                        log.debug("Fail maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+                        result = False
+                    else:
+                        log.debug("Pass maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+
+        else:
+            log.debug("Failure anytime with 100% loss")
+            result = False
+
+        self.add_report_entry(get=name, result={'loss': loss, 'delay': delay})
+        self.add_report_entry(check=name, result=result)
+
+        return result
+        
+
+    def search_pattern_tracefile(self, pattern="", mark=""):
         """
         Search for a pattern in the tracefile
-        Return True if found otherwise False
+        Returns a dictionary :
+            'result' : true|false
+            'line'   : matched line 
         If a mark is provided, first search for the mark, then look from the
         pattern starting from there.
         """
-        log.info("Enter with pattern={} mark={}-".format(pattern, mark))
+        log.info("Enter with pattern={} mark={}".format(pattern, mark))
         result = False
+        line = ""
 
         fname = self.get_filename(type='trace')
         log.debug("tracefile={}".format(fname))
@@ -241,9 +356,10 @@ class Lxc_agent(Agent):
 
         # Need to first look for the mark
         # ex : ### 200221-19:13:13 server ready ###
+        # ex : ### 200222-19:15:43 9E9T6EAN ###
         for line in fh:
             line = line.strip()
-            print("mark - line={}".format(line))
+            print("flag={} line={}".format(flag, line))
             if flag:
                 match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
                 if match:
@@ -256,11 +372,9 @@ class Lxc_agent(Agent):
                     result = True
                     break
 
-            print("pattern - line={}".format(line))
-
         fh.close()
         log.debug("result={}".format(result))
-        return result
+        return {"result": result, "line": line}
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

@@ -84,7 +84,6 @@ class Testrunner(object):
         self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
         self.playbook.register()
 
-
     def get_playbook(self):
         """
         Requirements : previous call to load_playbook
@@ -117,7 +116,6 @@ class Testrunner(object):
         """
         log.info("Enter with run={}".format(run))
         return json.dumps(self.playbook.report, indent=4)
-
 
 
 if __name__ == '__main__': #pragma: no cover

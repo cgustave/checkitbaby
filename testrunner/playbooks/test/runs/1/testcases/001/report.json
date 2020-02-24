@@ -1,11 +1,33 @@
 {
-    "result": true,
+    "result": false,
     "testcases": {
         "001": {
-            "result": true,
+            "result": false,
             "check": {
                 "origin": true,
-                "reply": true
+                "reply": false,
+                "pass_conntest": true,
+                "fail_conntest": false,
+                "fail_delay_conntest": false,
+                "pass_delay_conntest": true
+            },
+            "get": {
+                "pass_conntest": {
+                    "loss": "0",
+                    "delay": "27.029"
+                },
+                "fail_conntest": {
+                    "loss": 100,
+                    "delay": 999
+                },
+                "fail_delay_conntest": {
+                    "loss": "100",
+                    "delay": 999
+                },
+                "pass_delay_conntest": {
+                    "loss": "0",
+                    "delay": "27.151"
+                }
             }
         }
     }

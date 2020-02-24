@@ -8,7 +8,6 @@ import logging as log
 import os 
 import re
 import json
-from pathlib import Path
 from testcase import Testcase
 from lxc_agent import Lxc_agent
 from vyos_agent import Vyos_agent
@@ -84,19 +83,15 @@ class Playbook(object):
         self.name = name
         self.path = path
         self.run = run                # Run id
-
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
         self.nb_testcases = 0  
-
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
         self.dryrun = False           # Used for scenario syntax verification only (no connection to agent)
-
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
-
 
     def register(self):
         """
