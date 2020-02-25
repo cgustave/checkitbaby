@@ -91,11 +91,15 @@ class Vyos_agent(Agent):
 
         # Set delay
         match_delay = re.search("\sdelay\s+(?P<delay>\d+)", line)
+        match_loss  = re.search("\sloss\s+(?P<loss>\d+)", line)
         if match_delay:
             delay = match_delay.group('delay')
             log.debug("delay={}".format(delay))
+        elif match_loss:
+            loss = match_loss.group('loss')
+            log.debug("loss={}".format(loss))
         else:
-            log.error("Could not understand delay from line={}".format(line))
+            log.error("Could not understand traffic-policy syntax")
             raise SystemExit
 
         # Connect to agent if not already connected
