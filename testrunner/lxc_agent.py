@@ -399,9 +399,9 @@ class Lxc_agent(Agent):
 
         try:
            self._ssh.connect()
+           self._connected = True
         except:
             log.error("Connection to agent {} failed".format(self.name))
-
 
 
 if __name__ == '__main__': #pragma: no cover

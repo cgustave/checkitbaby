@@ -17,7 +17,6 @@ class Vyos_agent(Agent):
         """
         Constructor
         """
-        
         # create logger
         log.basicConfig(
               format='%(asctime)s,%(msecs)3.3d %(levelname)-8s[%(module)-\
@@ -50,6 +49,14 @@ class Vyos_agent(Agent):
         self._connected = False  # ssh connection state with the agent
         self._ssh = None         # Will be instanciated with type Vyos 
 
+    def __del__(self):
+        """
+        Desctructor to close opened connection to agent when exiting
+        """
+        log.info("Enter this")
+        if self._ssh:
+            self._ssh.close()
+       
     def process(self, line=""):
         """
         Vyos specific processing
@@ -115,14 +122,6 @@ class Vyos_agent(Agent):
             log.debug("traffic-policy {} : set loss {}".format(name, loss))
             self._ssh.set_traffic_policy(packet_loss=loss)
  
-    def __del__(self):
-          """
-          Desctructor to close opened connection to agent when exiting
-          """
-          log.info("Enter")
-          if self._ssh:
-              self._ssh.close()
-
     def connect(self):
         """
         Connect to vyos agent without sending any command
@@ -142,6 +141,7 @@ class Vyos_agent(Agent):
 
         try:
            self._ssh.connect()
+           self._connected = True
         except:
             log.error("Connection to agent {} failed".format(self.name))
 
