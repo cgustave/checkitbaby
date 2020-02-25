@@ -1,0 +1,2 @@
+
+R1-B1:1 traffic-policy WAN delay 90

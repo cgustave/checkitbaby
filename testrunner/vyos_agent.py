@@ -5,6 +5,7 @@ Created on Feb 12, 2019
 """
 import logging as log
 from agent import Agent
+from netcontrol.vyos.vyos import Vyos
 import re
 
 class Vyos_agent(Agent):
@@ -32,10 +33,115 @@ class Vyos_agent(Agent):
 
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
-        self.name = name 
+        # Attributs set in init
+        self.name = name
         self.conn = conn
         self.dryrun = dryrun
-        #super(Vyos_agent,self).__init__(name=name, conn=conn, dryrun=dryrun, debug=debug)
+
+        # Attributs to be set before processing
+        self.path = None
+        self.playbook = None
+        self.run = None
+        self.agent = None        # name, id ... and all info for the agent itself
+        self.testcase = None     # For which testcase id the agent was created
+        self.report = None       # Testcase report (provided from Workbook)
+
+        # Private attributs
+        self._connected = False  # ssh connection state with the agent
+        self._ssh = None         # Will be instanciated with type Vyos 
+
+    def process(self, line=""):
+        """
+        Vyos specific processing
+        list of commands :
+            traffic-policy NAME [delay DELAY loss LOSS]
+        """
+        log.info("Enter with line={}".format(line))
+
+        match = re.search("(?:(\s|\t)*[A-Za-z0-9\-_]+:\d+(\s|\t)+)(?P<command>[A-Za-z-]+)",line)
+
+        if match:
+            command = match.group('command')
+            log.debug("Matched with command={}".format(command))
+        else:
+            log.debug("No command has matched")
+
+        if command == 'traffic-policy':
+            self.cmd_traffic_policy(line)
+        else:
+            log.warning("command {} is unknown".format(command))
+
+
+    def cmd_traffic_policy(self, line=""):
+        """
+        Set traffic policy settings (delay and loss)
+        """
+        log.info("Enter with line={}".format(line))
+
+        delay = None
+        loss = None
+
+        match = re.search("traffic-policy\s+(?P<name>\w+)\s+", line)
+        if match:
+            name = match.group('name')
+            log.debug("name={}".format(name))
+        else:
+            log.error("Could not understand traffic-policy command syntax")
+            raise SystemExit
+
+        # Set delay
+        match_delay = re.search("\sdelay\s+(?P<delay>\d+)", line)
+        if match_delay:
+            delay = match_delay.group('delay')
+            log.debug("delay={}".format(delay))
+        else:
+            log.error("Could not understand delay from line={}".format(line))
+            raise SystemExit
+
+        # Connect to agent if not already connected
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            self.connect()
+
+        if delay:
+            log.debug("traffic-policy {} : set delay {}".format(name, delay)) 
+            self._ssh.set_traffic_policy(network_delay=delay)
+            
+        if loss:
+            log.debug("traffic-policy {} : set loss {}".format(name, loss))
+            self._ssh.set_traffic_policy(packet_loss=loss)
+ 
+    def __del__(self):
+          """
+          Desctructor to close opened connection to agent when exiting
+          """
+          log.info("Enter")
+          if self._ssh:
+              self._ssh.close()
+
+    def connect(self):
+        """
+        Connect to vyos agent without sending any command
+        This opens the ssh channel for data exchange
+        """
+        log.info("Enter")
+        ip = self.agent['ip']
+        port = self.agent['port']
+        login = self.agent['login']
+        password = self.agent['password']
+        ssh_key_file = self.agent['ssh_key_file']
+        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
+
+        self._ssh = Vyos(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+        tracefile_name = self.get_filename(type='trace')
+        self._ssh.trace_open(filename=tracefile_name)
+
+        try:
+           self._ssh.connect()
+        except:
+            log.error("Connection to agent {} failed".format(self.name))
+
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

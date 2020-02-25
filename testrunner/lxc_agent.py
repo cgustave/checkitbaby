@@ -6,7 +6,7 @@ Created on Feb 12, 2019
 import logging as log
 from agent import Agent
 import re
-import time
+from netcontrol.ssh.ssh import Ssh
 
 class Lxc_agent(Agent):
     """
@@ -232,14 +232,17 @@ class Lxc_agent(Agent):
         Reports packet loss and delays
         Results (average delay and loss) are reported in 'ping' report section
         Note : using -A (adaptative by default)
-        ex : ping [con_test] 10.0.2.1               (always pass)
-        ex : ping [con_test] 10.0.2.1 maxloss 50    (pass if loss < 50%)
+          ex : ping [con_test] 10.0.2.1               (always pass)
+        
+        Additional test criteria : maxloss and maxdelay:
+          ex : ping [con_test] 10.0.2.1 maxloss 50    (pass if loss < 50%)
+          ex : ping [con_test] 10.0.2.1 maxdelay 100  (pass if delay < 100)
         Return: true|false depending if pass criteria are matched
         """
         log.info("Enter with line=line")
         count = 5 
         loss = 100
-        delay = 999
+        delay = 9999
         result = True
 
         match = re.search("ping(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?P<host>[A-Za-z0-9_\.-]+)", line)
@@ -375,6 +378,31 @@ class Lxc_agent(Agent):
         fh.close()
         log.debug("result={}".format(result))
         return {"result": result, "line": line}
+
+
+    def connect(self):
+        """
+        Connect to lxc agent without sending any command
+        This opens the ssh channel for data exchange
+        """
+        log.info("Enter")
+        ip = self.agent['ip']
+        port = self.agent['port']
+        login = self.agent['login']
+        password = self.agent['password']
+        ssh_key_file = self.agent['ssh_key_file']
+        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
+
+        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+        tracefile_name = self.get_filename(type='trace')
+        self._ssh.trace_open(filename=tracefile_name)
+
+        try:
+           self._ssh.connect()
+        except:
+            log.error("Connection to agent {} failed".format(self.name))
+
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

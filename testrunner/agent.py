@@ -93,9 +93,11 @@ class Agent(object):
         """
         Returns different type of filename based on of path, playbook name, run id, agent name and connection id
 
-        * type='trace' : return a trace_file name
+        * type='trace' : returns a trace_file name
         Ex : run=1 testcase=2 agent_name='lxc-1' connection_id='3'
              filename should be './playbooks/myPlaybook/runs/1/testcases/2/lxc-1_3.log
+
+        * type='report' : returns path and filename for a report in testcase
         """
         log.info("Enter with type={}".format(type))
             
@@ -171,28 +173,6 @@ class Agent(object):
         f = open (filename, "w")
         f.write(json.dumps(self.report, indent=4))
         f.close()
-
-    def connect(self):
-        """
-        Connect to agent without sending any command
-        This opens the ssh channel for  data exchange
-        """
-        log.info("Enter")
-        ip = self.agent['ip']
-        port = self.agent['port']
-        login = self.agent['login']
-        password = self.agent['password']
-        ssh_key_file = self.agent['ssh_key_file']
-        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
-
-        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
-        tracefile_name = self.get_filename(type='trace')
-        self._ssh.trace_open(filename=tracefile_name)
-
-        try:
-           self._ssh.connect()
-        except:
-            log.error("Connection to agent {} failed".format(self.name))
 
     def random_string(self, length=8):
         """

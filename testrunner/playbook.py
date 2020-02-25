@@ -8,6 +8,7 @@ import logging as log
 import os 
 import re
 import json
+from pathlib import Path
 from testcase import Testcase
 from lxc_agent import Lxc_agent
 from vyos_agent import Vyos_agent
@@ -266,6 +267,11 @@ class Playbook(object):
         Returns the type of the agent called 'name'
         """
         log.info("Enter with name={}".format(name))
+
+        if name not in self.agents:
+            log.error("Unknown agent name {}".format(name))
+            raise SystemExit
+
         type = self.agents[name]['type']
         log.debug("name={} type={}".format(name, type))
         return type
@@ -368,6 +374,9 @@ class Playbook(object):
             raise SystemExit
         
         path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
+        p = Path(path)
+        p.mkdir(parents=True, exist_ok=True)
+
         log.debug("Create if needed path={}".format(path))
 
 if __name__ == '__main__': #pragma: no cover
