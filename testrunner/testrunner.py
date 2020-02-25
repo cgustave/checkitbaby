@@ -76,12 +76,12 @@ class Testrunner(object):
         self.playbook = None                         # Playbook object instance 
         self.path = path                             # base path of the playbook store 
 
-    def load_playbook(self, name=''):
+    def load_playbook(self, name='', dryrun=False):
         """
         Loads a playbook as a first element of list self.playbook 
         """
-        log.info("Enter with name={}".format(name))
-        self.playbook = Playbook(name=name, path=self.path, debug=self.debug)
+        log.info("Enter with name={} dryrun={}".format(name, dryrun))
+        self.playbook = Playbook(name=name, path=self.path, dryrun=dryrun, debug=self.debug)
         self.playbook.register()
 
     def get_playbook(self):

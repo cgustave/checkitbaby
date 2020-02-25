@@ -9,6 +9,8 @@ import json
 import string
 import random
 from netcontrol.ssh.ssh import Ssh
+from netcontrol.vyos.vyos import Vyos
+from netcontrol.fpoc.fpoc import Fpoc
 
 class Agent(object):
     """
@@ -181,6 +183,42 @@ class Agent(object):
         log.info("Enter with length={}".format(length))
         s = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
         return s
+
+    def connect(self, type=''):
+        """
+        Connect to vyos agent without sending any command
+        This opens the ssh channel for data exchange
+        """
+        log.info("Enter with type={}".format(type))
+        ip = self.agent['ip']
+        port = self.agent['port']
+        login = self.agent['login']
+        password = self.agent['password']
+        ssh_key_file = self.agent['ssh_key_file']
+        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
+
+        if not self.dryrun:
+
+            if type == 'lxc':
+                self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+            elif type == 'vyos':
+                self._ssh = Vyos(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+            elif type == 'fortipoc':
+                self._ssh = Fpoc(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+            else:
+                log.error("unknown type")
+                raise SystemExit
+
+            tracefile_name = self.get_filename(type='trace')
+            self._ssh.trace_open(filename=tracefile_name)
+
+            try:
+                self._ssh.connect()
+                self._connected = True
+            except:
+                log.error("Connection to agent {} failed".format(self.name))
+        else:
+            log.debug("dryrun mode")
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

@@ -56,7 +56,7 @@ CLASSES
      |      Requirements : previous call to load_playbook
      |      Returns : playbook in json format
      |  
-     |  load_playbook(self, name='')
+     |  load_playbook(self, name='', dryrun=False)
      |      Loads a playbook as a first element of list self.playbook
      |  
      |  run_all_testcases(self, run=None)

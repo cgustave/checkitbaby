@@ -22,5 +22,13 @@
 				"login" : "vyos",
 				"password" : "vyos",
 				"ssh_key_file" : "/home/cgustave/github/python/testrunner/testrunner/playbooks/test/conf/id_rsa"
-	          }
+	          },
+	"fpoc"  : {
+		        "type" : "fortipoc",
+				"ip"   : "192.168.122.178",
+				"port" : "22",
+				"login" : "admin",
+				"password" : "",
+				"ssh_key_file" : ""
+		      }
 }

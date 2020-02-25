@@ -63,7 +63,7 @@ class Playbook(object):
          ex : /fortipoc/playbooks/advpn/run/1/report.json
     """
 
-    def __init__(self, name='', path='', run=1, debug=False):
+    def __init__(self, name='', path='', run=1, dryrun=False, debug=False):
 
         # create logger
         log.basicConfig(
@@ -78,7 +78,7 @@ class Playbook(object):
             self.debug = True
             log.basicConfig(level='DEBUG')
 
-        log.info("Constructor with name={} path={} run={} debug={}".format(name, path, run, debug))
+        log.info("Constructor with name={} path={} run={} dryrun={} debug={}".format(name, path, run, dryrun, debug))
 
         # Attributs
         self.name = name
@@ -90,7 +90,7 @@ class Playbook(object):
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
-        self.dryrun = False           # Used for scenario syntax verification only (no connection to agent)
+        self.dryrun = dryrun          # Used for scenario syntax verification only (no connection to agent)
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
 
@@ -217,7 +217,6 @@ class Playbook(object):
             # Run generic methods (in agent.py) and specific ones
             self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=line)
-
 
     ### PRIVATE METHODS ###
 

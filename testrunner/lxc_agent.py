@@ -6,7 +6,6 @@ Created on Feb 12, 2019
 import logging as log
 from agent import Agent
 import re
-from netcontrol.ssh.ssh import Ssh
 
 class Lxc_agent(Agent):
     """
@@ -113,7 +112,7 @@ class Lxc_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect()
+            self.connect(type='lxc')
 
         # Open connection on agent
         cmd = "nc -l"
@@ -122,8 +121,9 @@ class Lxc_agent(Agent):
 
         cmd = cmd+" "+port+"\n"
         log.debug("sending cmd={}".format(cmd))
-        self._ssh.channel_send(cmd)
-        self._ssh.channel_read()
+        if not self.dryrun:
+            self._ssh.channel_send(cmd)
+            self._ssh.channel_read()
 
     def cmd_connect(self, line):
         """
@@ -147,7 +147,7 @@ class Lxc_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect()
+            self.connect(type='lxc')
 
         # Connection to server
         cmd = "nc "
@@ -156,8 +156,9 @@ class Lxc_agent(Agent):
       
         cmd = cmd+" "+ip+" "+port+"\n" 
         log.debug("sending cmd={}".format(cmd))
-        self._ssh.channel_send(cmd)
-        self._ssh.channel_read()
+        if not self.dryrun:
+            self._ssh.channel_send(cmd)
+            self._ssh.channel_read()
 
     def cmd_send(self, line):
         """
@@ -173,8 +174,9 @@ class Lxc_agent(Agent):
             data = match.group('data')
             log.debug("data={}".format(data))
             data = data+"\n"
-            self._ssh.channel_send(data)
-            self._ssh.channel_read()
+            if not self.dryrun:
+                self._ssh.channel_send(data)
+                self._ssh.channel_read()
         else:
             log.error("Could not recognize send command syntax in line={}".format(line))
             raise SystemExit
@@ -214,7 +216,9 @@ class Lxc_agent(Agent):
         log.debug("Result={}".format(result))
 
         # Writing testcase result in the playbook report
-        self.add_report_entry(check=name, result=result)
+        if not self.dryrun:
+            self.add_report_entry(check=name, result=result)
+
         return result
 
     def cmd_close(self, line):
@@ -256,75 +260,79 @@ class Lxc_agent(Agent):
 
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect()
+            self.connect(type='lxc')
       
         # Random mark for analysis
         reference = self.random_string(length=8)
-        self._ssh.trace_mark(reference)
+
+        if not self.dryrun:
+            self._ssh.trace_mark(reference)
 
         # ping
         data = "ping -n -A -w 2 -c "+str(count)+" -W 2 "
         data = data + host
         data = data + "\n"
         log.debug("data={}".format(data))
+
+        if not self.dryrun:
         # look for the prompt on a slow command (5 seconds)
-        maxround = self._ssh.maxround
-        self._ssh.maxround = 50
-        self._ssh.shell_send([data])
-        self._ssh.maxround = maxround
+            maxround = self._ssh.maxround
+            self._ssh.maxround = 50
+            self._ssh.shell_send([data])
+            self._ssh.maxround = maxround
        
-        # Get loss % : Process result since mark
-        sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
-        loss_line = sp['line']
-        log.debug("Found loss_line={}".format(loss_line))
+            # Get loss % : Process result since mark
+            sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
+            loss_line = sp['line']
+            log.debug("Found loss_line={}".format(loss_line))
 
-        # 5 packets transmitted, 5 received, 0% packet loss, time 803ms 
-        match = re.search("\s(?P<loss>\d+)%\spacket\sloss", loss_line)
-        if match:
-            loss = match.group('loss')
-            log.debug("loss={}".format(loss))
+            # 5 packets transmitted, 5 received, 0% packet loss, time 803ms 
+            match = re.search("\s(?P<loss>\d+)%\spacket\sloss", loss_line)
+            if match:
+                loss = match.group('loss')
+                log.debug("loss={}".format(loss))
 
-            # Check pass condition if any
-            log.debug("line={}".format(line))
-            match_maxloss = re.search("maxloss\s+(?P<maxloss>\d+)", line)
-            if match_maxloss:
-                maxloss = match_maxloss.group('maxloss')
-                log.debug("maxloss={}".format(maxloss))
-                if int(loss) > int(maxloss):
-                    log.debug("Fail maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
-                    result = False
-                else:
-                    log.debug("Pass maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
-
-        # Get avg rtt
-        if int(loss) != 100:
-            # rtt min/avg/max/mdev = 27.277/28.111/30.203/1.089 ms, ipg/ewma 200.766/28.137 ms
-            sp2 = self.search_pattern_tracefile(mark=reference, pattern='rtt min/avg/max')
-            delay_line = sp2['line']
-            log.debug("Found delay_line={}".format(delay_line))
-            match2 = re.search("\s=\s[0-9\.]+/(?P<delay>[0-9\.]+)/", delay_line)
-            if match2:
-                delay = match2.group('delay')
-                log.debug("delay={}".format(delay))
-
-                # Check maxdelay pass condition if any
+                # Check pass condition if any
                 log.debug("line={}".format(line))
-                match_maxdelay = re.search("maxdelay\s+(?P<maxdelay>\d+)", line)
-                if match_maxdelay:
-                    maxdelay = match_maxdelay.group('maxdelay')
-                    log.debug("maxdelay={}".format(maxdelay))
-                    if float(delay) > float(maxdelay):
-                        log.debug("Fail maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+                match_maxloss = re.search("maxloss\s+(?P<maxloss>\d+)", line)
+                if match_maxloss:
+                    maxloss = match_maxloss.group('maxloss')
+                    log.debug("maxloss={}".format(maxloss))
+                    if int(loss) > int(maxloss):
+                        log.debug("Fail maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
                         result = False
                     else:
-                        log.debug("Pass maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+                        log.debug("Pass maxloss criteria : loss={} maxloss={}".format(loss, maxloss))
 
-        else:
-            log.debug("Failure anytime with 100% loss")
-            result = False
+            # Get avg rtt
+            if int(loss) != 100:
+                # rtt min/avg/max/mdev = 27.277/28.111/30.203/1.089 ms, ipg/ewma 200.766/28.137 ms
+                sp2 = self.search_pattern_tracefile(mark=reference, pattern='rtt min/avg/max')
+                delay_line = sp2['line']
+                log.debug("Found delay_line={}".format(delay_line))
+                match2 = re.search("\s=\s[0-9\.]+/(?P<delay>[0-9\.]+)/", delay_line)
+                if match2:
+                    delay = match2.group('delay')
+                    log.debug("delay={}".format(delay))
 
-        self.add_report_entry(get=name, result={'loss': loss, 'delay': delay})
-        self.add_report_entry(check=name, result=result)
+                    # Check maxdelay pass condition if any
+                    log.debug("line={}".format(line))
+                    match_maxdelay = re.search("maxdelay\s+(?P<maxdelay>\d+)", line)
+                    if match_maxdelay:
+                        maxdelay = match_maxdelay.group('maxdelay')
+                        log.debug("maxdelay={}".format(maxdelay))
+                        if float(delay) > float(maxdelay):
+                            log.debug("Fail maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+                            result = False
+                        else:
+                            log.debug("Pass maxdelay criteria : delay={} maxdelay={}".format(delay, maxdelay))
+
+            else:
+                log.debug("Failure anytime with 100% loss")
+                result = False
+
+            self.add_report_entry(get=name, result={'loss': loss, 'delay': delay})
+            self.add_report_entry(check=name, result=result)
 
         return result
         
@@ -378,31 +386,6 @@ class Lxc_agent(Agent):
         fh.close()
         log.debug("result={}".format(result))
         return {"result": result, "line": line}
-
-
-    def connect(self):
-        """
-        Connect to lxc agent without sending any command
-        This opens the ssh channel for data exchange
-        """
-        log.info("Enter")
-        ip = self.agent['ip']
-        port = self.agent['port']
-        login = self.agent['login']
-        password = self.agent['password']
-        ssh_key_file = self.agent['ssh_key_file']
-        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
-
-        self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
-        tracefile_name = self.get_filename(type='trace')
-        self._ssh.trace_open(filename=tracefile_name)
-
-        try:
-           self._ssh.connect()
-           self._connected = True
-        except:
-            log.error("Connection to agent {} failed".format(self.name))
-
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

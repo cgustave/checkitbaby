@@ -5,7 +5,6 @@ Created on Feb 12, 2019
 """
 import logging as log
 from agent import Agent
-from netcontrol.vyos.vyos import Vyos
 import re
 
 class Vyos_agent(Agent):
@@ -112,39 +111,17 @@ class Vyos_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect()
+            self.connect(type='vyos')
 
         if delay:
             log.debug("traffic-policy {} : set delay {}".format(name, delay)) 
-            self._ssh.set_traffic_policy(network_delay=delay)
+            if not self.dryrun:
+                self._ssh.set_traffic_policy(network_delay=delay)
             
         if loss:
             log.debug("traffic-policy {} : set loss {}".format(name, loss))
-            self._ssh.set_traffic_policy(packet_loss=loss)
- 
-    def connect(self):
-        """
-        Connect to vyos agent without sending any command
-        This opens the ssh channel for data exchange
-        """
-        log.info("Enter")
-        ip = self.agent['ip']
-        port = self.agent['port']
-        login = self.agent['login']
-        password = self.agent['password']
-        ssh_key_file = self.agent['ssh_key_file']
-        log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
-
-        self._ssh = Vyos(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
-        tracefile_name = self.get_filename(type='trace')
-        self._ssh.trace_open(filename=tracefile_name)
-
-        try:
-           self._ssh.connect()
-           self._connected = True
-        except:
-            log.error("Connection to agent {} failed".format(self.name))
-
+            if not self.dryrun:
+                self._ssh.set_traffic_policy(packet_loss=loss)
 
 
 if __name__ == '__main__': #pragma: no cover

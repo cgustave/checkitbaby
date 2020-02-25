@@ -24,6 +24,7 @@ class TestrunnerTestCase(unittest.TestCase):
     def setUp(self):
         self.tr = Testrunner(path='./playbooks', debug=True)
 
+    @unittest.skip  # no reason needed
     def test_loading(self):
 
         # Load the given playbook testcases 
@@ -43,11 +44,15 @@ class TestrunnerTestCase(unittest.TestCase):
 
         #self.assertEqual(self.tr.playbook.nb_testcases,2)
 
+    def test_dryrun_playbook(self):
+        self.tr.load_playbook(name="test", dryrun=True)
+        self.tr.run_all_testcases(run=1)
 
     def test_run_playbook(self):
-        self.tr.load_playbook(name="test")
+        self.tr.load_playbook(name="test", dryrun=False)
         self.tr.run_all_testcases(run=1)
         print("report={}".format(self.tr.run_report()))
+
 
 if __name__ == '__main__':
     unittest.main()

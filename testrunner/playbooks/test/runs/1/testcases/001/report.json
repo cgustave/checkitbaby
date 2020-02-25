@@ -6,27 +6,27 @@
             "check": {
                 "origin": true,
                 "reply": false,
-                "pass_conntest": true,
+                "pass_conntest": false,
                 "fail_conntest": false,
                 "fail_delay_conntest": false,
                 "pass_delay_conntest": true
             },
             "get": {
                 "pass_conntest": {
-                    "loss": "0",
-                    "delay": "52.223"
+                    "loss": 100,
+                    "delay": 9999
                 },
                 "fail_conntest": {
                     "loss": 100,
                     "delay": 9999
                 },
                 "fail_delay_conntest": {
-                    "loss": "0",
-                    "delay": "62.018"
+                    "loss": 100,
+                    "delay": 9999
                 },
                 "pass_delay_conntest": {
                     "loss": "0",
-                    "delay": "56.686"
+                    "delay": "56.483"
                 }
             }
         }
