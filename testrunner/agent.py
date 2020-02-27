@@ -11,6 +11,7 @@ import random
 from netcontrol.ssh.ssh import Ssh
 from netcontrol.vyos.vyos import Vyos
 from netcontrol.fpoc.fpoc import Fpoc
+from netcontrol.fortigate.fortigate import Fortigate
 
 class Agent(object):
     """
@@ -103,8 +104,11 @@ class Agent(object):
         """
         log.info("Enter with type={}".format(type))
             
-        file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/testcases/"
+        file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/"
+
         if type == 'trace':
+           testcase = self.testcase
+           file_path = file_path+"testcases/"+testcase+"/"
            file_name = str(self.name)+"_"+str(self.conn)+".log"
         elif type == 'report':
            file_name = "report.json"
@@ -112,8 +116,7 @@ class Agent(object):
            log.error("unknown type={}".format(type))
            raise SystemExit
            
-        testcase = self.testcase
-        filename = file_path+testcase+"/"+file_name
+        filename = file_path+file_name
         log.debug("type={} filename={}".format(type, filename))
         return(filename)
 
@@ -163,10 +166,11 @@ class Agent(object):
             self.report['testcases'][self.testcase]['result'] = tr
             log.debug("Testcase result updated with result={}".format(tr))
 
-        # Add get report entry
+        # Add get report entry for the given agent
         if get:
             log.debug("Adding get={} result={} in testcase={}".format(get, result, self.testcase))
-            self.report['testcases'][self.testcase]['get'][get] = result
+            self.report['testcases'][self.testcase]['get'][self.name] = {}
+            self.report['testcases'][self.testcase]['get'][self.name][get] = result
 
         # Write report file
         filename = self.get_filename(type='report')
@@ -205,6 +209,8 @@ class Agent(object):
                 self._ssh = Vyos(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
             elif type == 'fortipoc':
                 self._ssh = Fpoc(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+            elif type == 'fortigate':
+                self._ssh = Fortigate(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
             else:
                 log.error("unknown type")
                 raise SystemExit

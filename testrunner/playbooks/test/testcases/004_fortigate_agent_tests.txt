@@ -1,0 +1,12 @@
+# Get FortiGate VM version
+
+#FGT-B1-1:1 get version
+#FGT-B2-9:1 get version
+#FGT-H1-253:1 get version
+
+#FGT-B1-1:1 check [ssh_session_exist] session filter dport=22 src=192.168.0.254
+FGT-B1-1:1 check [session_is_dirty] session filter dport=22 has state=dirty 
+FGT-B1-1:1 check [session_is_may_dirty] session filter dport=22 has state=may_dirty 
+FGT-B1-1:1 check [session_is_may_dirty] session filter dport=22 has state=may_dirty state=local 
+
+
