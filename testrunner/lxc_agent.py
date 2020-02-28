@@ -370,7 +370,6 @@ class Lxc_agent(Agent):
         # ex : ### 200222-19:15:43 9E9T6EAN ###
         for line in fh:
             line = line.strip()
-            print("flag={} line={}".format(flag, line))
             if flag:
                 match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
                 if match:

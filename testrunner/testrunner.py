@@ -20,7 +20,6 @@ At the end of the testcase, a generic result fail/pass is reported.
 import logging as log
 import json
 import os
-import re
 from playbook import Playbook
 
 class Testrunner(object):

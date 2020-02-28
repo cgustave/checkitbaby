@@ -201,6 +201,8 @@ class Agent(object):
         ssh_key_file = self.agent['ssh_key_file']
         log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
 
+        success = True
+
         if not self.dryrun:
 
             if type == 'lxc':
@@ -219,12 +221,16 @@ class Agent(object):
             self._ssh.trace_open(filename=tracefile_name)
 
             try:
-                self._ssh.connect()
+                success = self._ssh.connect()
                 self._connected = True
+                success = True
             except:
                 log.error("Connection to agent {} failed".format(self.name))
+                success = False
         else:
             log.debug("dryrun mode")
+
+        return success
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

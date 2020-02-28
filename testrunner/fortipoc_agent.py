@@ -97,7 +97,11 @@ class Fortipoc_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect(type='fortipoc')
+            success = self.connect(type='fortipoc')
+            
+            if not success:
+                log.error("Could not connect to FortiPoC. Aborting scenario")
+                raise SystemExit
 
         if not self.dryrun:
             self._ssh.set_poc_link_status(device=device, link=port, status=state)

@@ -58,7 +58,7 @@ class Fortigate_agent(Agent):
         """
         Desctructor to close opened connection to agent when exiting
         """
-        log.info("Enter this")
+        log.info("Enter")
         if self._ssh:
             self._ssh.close()
 
@@ -92,8 +92,13 @@ class Fortigate_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect(type='fortigate')
+            success = self.connect(type='fortigate')
+        
+            if not success:
+                log.error("Could not connect to FortiGate. Won't get information, continue scenario.")
+                return False
 
+        # get version
         match_version = re.search("get\sversion", line)
         if match_version:
              if not self.dryrun:
@@ -109,22 +114,86 @@ class Fortigate_agent(Agent):
     def cmd_check(self, line=""):
         """
         Process check commands
+        Check commands distribution to specific handling
         """
         log.info("Enter with line={}".format(line))
  
-        match_command = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?P<command>\w+)\s",line)
+        match_command = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?P<command>\w+)",line)
         if match_command:
           name =  match_command.group('name')
           command = match_command.group('command')
           if command == 'session':
               self._cmd_check_session(name=name, line=line)
+          elif command == 'bgp':
+              self._cmd_check_bgp(name=name, line=line)
           else:
-              log.error("Unknown check command {}".format(command))
+              log.error("Unknown check command '{}' for test named {}".format(command, name))
               raise SystemExit
         else:
            log.error("Could not understand check command syntax")
            raise SystemExit
- 
+
+    def _cmd_check_bgp(self, name="", line=""):
+        """
+        Checks on bgp routing table (from get router info routing-table bgp)
+        - number of bgp routes is 4 :
+          ex : FGT-B1-1 check [bgp_4_routes] bgp has total=4
+        - bgp route for subnet 10.0.0.0/24 exist :
+          ex : FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
+        - bgp nexthop 10.255.1.253 exist
+          ex : FGT-B1-1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
+        - bgp has route toward interface vpn_mpls
+          ex : FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
+        - multiple requirements can be combined 
+          ex ... has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
+        """
+        log.info("Enter with name={} line={}".format(name, line))
+        
+        found_flag = False
+
+        # Connect to agent if not already connected
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            success = self.connect(type='fortigate')
+            log.debug("connection success={}".format(success))
+
+            if not success:
+                log.error("Could not connect to FortiGate {} to extract session. Abort scenario.".format(self.name))
+                raise SystemExit
+        
+        # Query for bgp routes    
+        result = self._ssh.get_bgp_routes()
+        log.debug("Found result={}".format(result))
+
+        # See if at least one bgp route was found
+        if result:
+            if result['total'] >= 1:
+                log.debug("At least 1 bgp route was found (total={})".format(result['total']))
+                found_flag = True
+
+        # Without any further requirements, result is pass
+        feedback = found_flag
+
+        # Processing further requirements (has ...)
+        match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+        if match_has:
+            requirements = match_has.group('requirements')
+            log.debug("requirements list: {}".format(requirements))
+            for r in requirements.split():
+                log.debug("requirement: {}".format(r))
+                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                if match_req:
+                    rname = match_req.group('rname')
+                    rvalue = match_req.group('rvalue')
+                    log.debug("Checking requirement {}={}".format(rname, rvalue))
+                    rfdb = self._check_bgp_requirement(rname=rname, rvalue=rvalue, result=result)
+                    feedback = feedback and rfdb
+         
+        self.add_report_entry(check=name, result=feedback)
+
+        return found_flag
+
+
 
     def _cmd_check_session(self, name="", line=""):
         """
@@ -140,8 +209,11 @@ class Fortigate_agent(Agent):
  
         # Prepare session filter
         session_filter = {} 
-        # TBD : has matches as a session filter - to be fixed
-        match_command = re.search("session\s+filter\s+(?P<filters>.*)(?:\s+has\s+)?",line)
+        # remove requirements from line (after 'has ...')
+        line_no_requirement = line
+        line_no_requirement = line.split('has')[0]
+        log.debug("line_no_requirement={}".format(line_no_requirement))
+        match_command = re.search("session\s+filter\s+(?P<filters>.*)(?:\s+has\s+)?",line_no_requirement)
         if match_command:
             filters = match_command.group('filters')
             log.debug("filters={}".format(filters))
@@ -159,7 +231,12 @@ class Fortigate_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect(type='fortigate')
+            success = self.connect(type='fortigate')
+            log.debug("connection success={}".format(success))
+
+            if not success:
+                log.error("Could not connect to FortiGate {} to extract session. Abort scenario.".format(self.name))
+                raise SystemExit
         
         # Query for session    
         result = self._ssh.get_session(filter=session_filter)
@@ -188,7 +265,7 @@ class Fortigate_agent(Agent):
                 if match_req:
                     rname = match_req.group('rname')
                     rvalue = match_req.group('rvalue')
-                    log.debug("Checking requirement {}:{}".format(rname, rvalue))
+                    log.debug("Checking requirement {}={}".format(rname, rvalue))
                     rfdb = self._check_session_requirement(rname=rname, rvalue=rvalue, result=result)
                     feedback = feedback and rfdb
          
@@ -197,30 +274,93 @@ class Fortigate_agent(Agent):
 
     def _check_session_requirement(self, result={}, rname='', rvalue=''):
         """
-        Validates session requirements.
-        Handling may be different based on the requirement type
+        Validates session requirements, that is verifying if the 'has ...' part
+        of the scenario line has all its requirements set.
+        A list of requirement are described as key=value pairs seperated by
+        spaces all after keyworl 'has ...'
+        Handling may be different based on the requirement type :
+        - session state : search in the 'state' list of result dict
+        - Other requirement keys should have the same key as the session result key
+        Prerequisite : one session should have been selected so result dict
+        contains all its details
+
         state : should be search in session 'state' dict
+        Returns : True if requirements are met, false otherwise
         """
         log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
         
         fb = True  # by default, requirement is met
 
         # Dealing with state
-        if rname == 'state':
+        log.debug("result={}".format(result))
+
+        if not 'state' in result:
+            result['state'] = []
+        
+        if rname == 'state' :
             log.debug("Checking state '{}' is set on the session".format(rvalue))
             if result['state'].count(rvalue) > 0:
                 log.debug("state {} is set".format(rname))
             else :
                 log.debug("state {} is not set, requirement is not met".format(rvalue))
                 fb = False
+
+        elif rname in ('src','dest','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total'):
+            log.debug("Accepted requirement rname={}".format(rname))
+            if rname in result:
+                if result[rname] == rvalue:
+                    log.debug("rname={} found : requirement is met".format(rname))
+                    fb = True
+                else :
+                    log.debug("rname={} found : requirement is not met".format(rname))
+                    fb = False
         else:
             log.error("unknown session requirement {}={}".format(rname, rvalue))
             raise SystemExit
        
         log.debug("requirements verdict : {}".format(fb))
         return fb
-        
- 
+
+    def _check_bgp_requirement(self, result={}, rname='', rvalue=''):
+        """
+        Validates bgp routes requirements, that is verifying if the 'has ...' part
+        """
+        log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
+
+        fb = True  # by default, requirement is met
+
+        if not 'subnet' in result:
+            result['subnet'] = []
+
+        if not 'nexthop' in result:
+            result['nexthop'] = []
+         
+        if not 'interface' in result:
+            result['interface'] = []
+
+        if rname == 'total' :
+            log.debug("Checking exact number of subnets : asked={} got={}".format(rvalue, result['total']))
+            if str(result['total']) == str(rvalue):
+                log.debug("Total number of bgp routes is matching requirement")
+            else:
+                log.debug("Total number of bgp routes does not match requirement")
+                fb = False
+                  
+        elif rname in ('subnet','nexthop','interface'):
+            log.debug("requirement {}={} is known".format(rname, rvalue))
+            if result[rname].count(rvalue) > 0:
+                log.debug("rname={} found : requirement is met".format(rname))
+                fb = True
+            else :
+                log.debug("rname={} found : requirement is not met".format(rname))
+                fb = False
+            
+        else:
+            log.debug("unknown bgp requirement {}={} is unknown".format(rname, rvalue))
+            raise SystemExit
+
+        log.debug("requirements verdict : {}".format(fb))
+        return fb
  
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

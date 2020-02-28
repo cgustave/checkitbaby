@@ -111,7 +111,12 @@ class Vyos_agent(Agent):
         # Connect to agent if not already connected
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect(type='vyos')
+            success = self.connect(type='vyos')
+
+            if not success:
+                log.error("Could not connect to Vyos. Aborting scenario.")
+                raise SystemExit
+                
 
         if delay:
             log.debug("traffic-policy {} : set delay {}".format(name, delay)) 
