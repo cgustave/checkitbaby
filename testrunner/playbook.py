@@ -90,6 +90,7 @@ class Playbook(object):
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
+        self.variables = {}           # Variables definitions
         self.dryrun = dryrun          # Used for scenario syntax verification only (no connection to agent)
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
@@ -124,7 +125,7 @@ class Playbook(object):
         self.nb_testcases = nb
         log.debug("Number of registered testcases={}".format(self.nb_testcases))
         self._register_used_agents()
-        self._load_agents()
+        self._load_agents_and_variables()
 
     def get_agents(self):
         """
@@ -209,14 +210,17 @@ class Playbook(object):
             # Tell agent who it is and for which testcase it has been created 
             self.agents_connections[agent_name][agent_conn].agent = self.agents[agent_name]
 
+            # Provide variables to agent
+            self.agents_connections[agent_name][agent_conn].variables = self.variables
+
             # Provide report for update
             self.agents_connections[agent_name][agent_conn].report = self.report 
    
             self._create_testcase_run_file_structure(testcase_id=testcase.id)
 
             # Run generic methods (in agent.py) and specific ones
-            self.agents_connections[agent_name][agent_conn].process_generic(line=line)
-            self.agents_connections[agent_name][agent_conn].process(line=line)
+            translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
+            self.agents_connections[agent_name][agent_conn].process(line=translated_line)
 
     ### PRIVATE METHODS ###
 
@@ -324,27 +328,39 @@ class Playbook(object):
                     log.debug("Playbook new agent={}".format(agent))
                     self.testcases_agents.append(agent)
 
-    def _load_agents(self):
+    def _load_agents_and_variables(self):
         """
         Requirements : an agent file should exists
+        variable files are optional
         Load all agents with their details from json file
         """
         log.info("Enter")
 
         dir = self.path+"/"+self.name+"/conf"
-        file = self.path+"/"+self.name+"/conf/agents.json"
+        file_agents = self.path+"/"+self.name+"/conf/agents.json"
+        file_variables = self.path+"/"+self.name+"/conf/variables.json"
         
         # checks agent conf dir and json file exists
         if not (os.path.exists(dir) and os.path.isdir(dir)):
             print ("conf dir {} does not exist or is not a directory\n".format(dir))
             raise SystemExit
 
-        if not (os.path.exists(file) and os.path.isfile(file)):
-            print ("file agents.json does not exists ({})\n".format(file))
+        if not (os.path.exists(file_agents) and os.path.isfile(file_agents)):
+            print ("file agents.json does not exists ({})\n".format(file_agents))
             raise SystemExit
 
-        with open(file, encoding='utf-8') as F:
+        log.debug("Loading agents")
+        with open(file_agents, encoding='utf-8') as F:
             self.agents = json.loads(F.read())
+        F.close() 
+
+        if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
+            print ("warning : file variables.json does not exists ({})\n".format(file_agents))
+        else :
+            log.debug("Loading variables")
+            with open(file_variables, encoding='utf-8') as V:
+                self.variables = json.loads(V.read())
+            V.close() 
 
     def _create_testcase_run_file_structure(self, testcase_id=None):
         """

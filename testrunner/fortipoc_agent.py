@@ -41,6 +41,7 @@ class Fortipoc_agent(Agent):
         self.playbook = None
         self.run = None
         self.agent = None        # name, id ... and all info for the agent itself
+        self.variables = None    # Scenario variables
         self.testcase = None     # For which testcase id the agent was created
         self.report = None       # Testcase report (provided from Workbook)
 

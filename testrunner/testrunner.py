@@ -128,9 +128,6 @@ if __name__ == '__main__': #pragma: no cover
     # Load test agents details
     trun.load_agents()
 
-    # Load variables (if any)
-    trun.load_variables()
-
     # Load playbook with all testcases
     nb_testcases = trun.register_testcases(playbook="myPlaybook")
     print("Loaded {} testcases\n".format(nb_testcases))

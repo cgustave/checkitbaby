@@ -8,41 +8,15 @@
                 "reply": false,
                 "pass_conntest": true,
                 "fail_conntest": false,
-                "fail_delay_conntest": true,
+                "fail_delay_conntest": false,
                 "pass_delay_conntest": true
             },
             "get": {
                 "clt-1": {
-                    "fail_delay_conntest": {
+                    "pass_delay_conntest": {
                         "loss": "0",
-                        "delay": "5.178"
+                        "delay": "5.187"
                     }
-                }
-            }
-        },
-        "004": {
-            "result": false,
-            "check": {
-                "ssh_session_exist": true,
-                "session_is_dirty": false,
-                "session_is_may_dirty": true,
-                "session_is_may_dirty_and_local": true,
-                "session_gw_pass": true,
-                "router_bgp_total6": true,
-                "router_bgp_nexthop": true,
-                "router_bgp_interface": true,
-                "router_bgp_subnet": true,
-                "router_bgp_has_route": true
-            },
-            "get": {
-                "FGT-B1-1": {
-                    "version": "v6.2.3,build1066,191219"
-                },
-                "FGT-B2-9": {
-                    "version": "v6.2.3,build1066,191219"
-                },
-                "FGT-H1-253": {
-                    "version": "v6.2.3,build1066,191219"
                 }
             }
         }
