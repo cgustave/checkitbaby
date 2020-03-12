@@ -117,20 +117,8 @@ class Vyos_agent(Agent):
             if not success:
                 log.error("Could not connect to Vyos. Aborting scenario.")
                 raise SystemExit
-         
-        if delay and not loss:
-            log.debug("traffic-policy {} : set delay {}".format(name, delay)) 
-            if not self.dryrun:
-                self._ssh.traffic_policy = name
-                self._ssh.set_traffic_policy(network_delay=delay)
-            
-        elif loss and not delay:
-            log.debug("traffic-policy {} : set loss {}".format(name, loss))
-            if not self.dryrun:
-                self._ssh.traffic_policy = name
-                self._ssh.set_traffic_policy(packet_loss=loss)
-
-        elif loss and delay:
+   
+        if has_matched:
             log.debug("traffic-policy {} : set loss {} and set delay {}".format(name, loss, delay))
             if not self.dryrun:
                 self._ssh.traffic_policy = name
