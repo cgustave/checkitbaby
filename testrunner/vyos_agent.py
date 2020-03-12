@@ -28,6 +28,9 @@ class Vyos_agent(Agent):
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
+        else:
+            self.debug = False
+            log.basicConfig(level='ERROR')
 
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
@@ -49,14 +52,6 @@ class Vyos_agent(Agent):
         self._connected = False  # ssh connection state with the agent
         self._ssh = None         # Will be instanciated with type Vyos 
 
-    def __del__(self):
-        """
-        Desctructor to close opened connection to agent when exiting
-        """
-        log.info("Enter this")
-        if self._ssh:
-            self._ssh.close()
-       
     def process(self, line=""):
         """
         Vyos specific processing
@@ -99,13 +94,18 @@ class Vyos_agent(Agent):
         # Set delay
         match_delay = re.search("\sdelay\s+(?P<delay>\d+)", line)
         match_loss  = re.search("\sloss\s+(?P<loss>\d+)", line)
+        has_matched = False
         if match_delay:
+            has_matched = True
             delay = match_delay.group('delay')
-            log.debug("delay={}".format(delay))
-        elif match_loss:
+            log.debug("found delay={}".format(delay))
+
+        if match_loss:
+            has_matched = True
             loss = match_loss.group('loss')
-            log.debug("loss={}".format(loss))
-        else:
+            log.debug("found loss={}".format(loss))
+
+        if not has_matched:
             log.error("Could not understand traffic-policy syntax")
             raise SystemExit
 
@@ -117,18 +117,27 @@ class Vyos_agent(Agent):
             if not success:
                 log.error("Could not connect to Vyos. Aborting scenario.")
                 raise SystemExit
-                
-
-        if delay:
+         
+        if delay and not loss:
             log.debug("traffic-policy {} : set delay {}".format(name, delay)) 
             if not self.dryrun:
+                self._ssh.traffic_policy = name
                 self._ssh.set_traffic_policy(network_delay=delay)
             
-        if loss:
+        elif loss and not delay:
             log.debug("traffic-policy {} : set loss {}".format(name, loss))
             if not self.dryrun:
+                self._ssh.traffic_policy = name
                 self._ssh.set_traffic_policy(packet_loss=loss)
 
+        elif loss and delay:
+            log.debug("traffic-policy {} : set loss {} and set delay {}".format(name, loss, delay))
+            if not self.dryrun:
+                self._ssh.traffic_policy = name
+                self._ssh.set_traffic_policy(packet_loss=loss, network_delay=delay)
+        else:
+            log.error("unexpected traffic policy request")
+            raise SystemExit
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

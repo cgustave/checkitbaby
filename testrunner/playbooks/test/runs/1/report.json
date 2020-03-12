@@ -1,24 +1,13 @@
 {
-    "result": false,
+    "result": true,
     "testcases": {
         "001": {
-            "result": false,
+            "result": true,
             "check": {
                 "origin": true,
-                "reply": false,
-                "pass_conntest": true,
-                "fail_conntest": false,
-                "fail_delay_conntest": false,
-                "pass_delay_conntest": true
+                "reply": true
             },
-            "get": {
-                "clt-1": {
-                    "pass_delay_conntest": {
-                        "loss": "0",
-                        "delay": "5.187"
-                    }
-                }
-            }
+            "get": {}
         }
     }
 }

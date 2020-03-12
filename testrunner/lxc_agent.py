@@ -29,6 +29,9 @@ class Lxc_agent(Agent):
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
+        else:
+            self.debug = False
+            log.basicConfig(level='ERROR')
 
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
@@ -54,10 +57,10 @@ class Lxc_agent(Agent):
         """
         Desctructor to close opened connection to agent when exiting
         """
-        log.info("Enter")
         if self._ssh:
             self._ssh.close()
-       
+
+
     def process(self, line=""):
         """
         LXC specific line processing
@@ -178,6 +181,7 @@ class Lxc_agent(Agent):
             if not self.dryrun:
                 self._ssh.channel_send(data)
                 self._ssh.channel_read()
+
         else:
             log.error("Could not recognize send command syntax in line={}".format(line))
             raise SystemExit
@@ -207,6 +211,11 @@ class Lxc_agent(Agent):
                 mark = match2.group('mark')
                 log.debug("since mark={}".format(mark))
 
+            # read from agent (and write to tracefile)
+            read_data = self._ssh.channel_read()
+            log.debug("CHECK RECV={}".format(read_data))
+
+            # Check in the tracefile
             sp = self.search_pattern_tracefile(pattern=pattern, mark=mark)
             result = sp['result']
 
@@ -337,7 +346,6 @@ class Lxc_agent(Agent):
 
         return result
         
-
     def search_pattern_tracefile(self, pattern="", mark=""):
         """
         Search for a pattern in the tracefile
@@ -371,6 +379,7 @@ class Lxc_agent(Agent):
         # ex : ### 200222-19:15:43 9E9T6EAN ###
         for line in fh:
             line = line.strip()
+            log.debug("line={}".format(line))
             if flag:
                 match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
                 if match:
@@ -386,6 +395,9 @@ class Lxc_agent(Agent):
         fh.close()
         log.debug("result={}".format(result))
         return {"result": result, "line": line}
+
+    def close(self):
+        log.info("Enter")
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

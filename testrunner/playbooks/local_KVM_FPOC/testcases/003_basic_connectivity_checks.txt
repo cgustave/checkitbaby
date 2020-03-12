@@ -1,0 +1,27 @@
+# Checking basic connectivity between branches
+
+message "Checking tcp two-way connectity from branch1 to branch2"
+
+HOSTS-B2:1 open tcp 9000
+HOSTS-B2:1 mark "receive_ready"
+HOSTS-B1:1 connect tcp $HOST-B2 9000
+# forward direction
+HOSTS-B1:1 send "alice"
+HOSTS-B2:1 check [tcp_forward] "alice" since "receive_ready"
+
+# reply direction
+HOSTS-B2:1 send "bob"
+HOSTS-B1:1 mark "whatever" 
+HOSTS-B1:1 check [tcp_reply] "bob" 
+
+
+HOSTS-B1:1 close
+HOSTS-B2:1 close
+
+
+
+
+
+
+
+

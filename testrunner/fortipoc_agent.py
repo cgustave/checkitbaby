@@ -28,6 +28,9 @@ class Fortipoc_agent(Agent):
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
+        else:
+            self.debug = False
+            log.basicConfig(level='ERROR')
 
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
@@ -53,7 +56,6 @@ class Fortipoc_agent(Agent):
         """
         Desctructor to close opened connection to agent when exiting
         """
-        log.info("Enter")
         if self._ssh:
             self._ssh.close()
 

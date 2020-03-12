@@ -62,6 +62,7 @@ class Testrunner(object):
             log.basicConfig(level='DEBUG')
         else:
             self.debug = False
+            log.basicConfig(level='ERROR')
 
         if not (os.path.exists(path) and os.path.isdir(path)):
             print ("path does not exist or is not a directory\n")

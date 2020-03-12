@@ -196,7 +196,8 @@ class Agent(object):
         # Add get report entry for the given agent
         if get:
             log.debug("Adding get={} result={} in testcase={}".format(get, result, self.testcase))
-            self.report['testcases'][self.testcase]['get'][self.name] = {}
+            if self.name not in self.report['testcases'][self.testcase]['get']:
+               self.report['testcases'][self.testcase]['get'][self.name] = {}
             self.report['testcases'][self.testcase]['get'][self.name][get] = result
 
         # Write report file
@@ -258,6 +259,13 @@ class Agent(object):
             log.debug("dryrun mode")
 
         return success
+
+    def close(self):
+        """
+        Generic close for all agent, may be overwritten
+        """
+        log.info("Enter")
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

@@ -6,6 +6,7 @@ Created on Feb 12, 2019
 
 import logging as log
 import os 
+import glob
 import re
 import json
 from pathlib import Path
@@ -77,6 +78,9 @@ class Playbook(object):
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
+        else:
+            self.debug = False
+            log.basicConfig(level='ERROR')
 
         log.info("Constructor with name={} path={} run={} dryrun={} debug={}".format(name, path, run, dryrun, debug))
 
@@ -107,9 +111,9 @@ class Playbook(object):
         """
         log.info("Enter")
         nb = 0
-        for filename in os.listdir(self.path+"/"+self.name+"/testcases"):
+        for filename in sorted(os.listdir(self.path+"/"+self.name+"/testcases")):
             nb=nb+1
-            log.debug("nb={} filename={}".format(nb, filename))
+            log.debug("listdir : nb={} filename={}".format(nb, filename))
             
             # Extract testcase id and name from filename
             match = re.search("^(?P<id>\d+)(?:_)(?P<name>\S+)(?:.txt)",filename)
@@ -176,6 +180,10 @@ class Playbook(object):
         """
         log.info("Enter")
         log.debug("Testcase id={} name={}".format(testcase.id, testcase.name))
+        print("* Starting {} - {}".format(testcase.id, testcase.name)) 
+
+        # remove old run logfiles and create run filestructure if needed
+        self._create_testcase_run_file_structure(testcase_id=testcase.id)
 
         for line in testcase.lines:
             log.debug("line={}".format(line))
@@ -183,6 +191,15 @@ class Playbook(object):
             # Get agent name, type and connection_id
             (agent_name, agent_type, agent_conn) = self._get_agent_from_tc_line(id=testcase.id, line=line)
             log.debug("agent_name={} agent_type={} agent_conn={}".format(agent_name, agent_type, agent_conn))
+
+            # Deal with 'message', 'skip all'
+            if agent_type == "generic" and agent_name == "continue":
+                log.debug("Generic agent, no more processing needed")
+                continue
+
+            if  agent_type == "generic" and agent_name == "skipall":
+                log.debug("Generic agent, skipall request")
+                break
 
             # Create new agent connection if needed
             if self._create_agent_conn(name=agent_name, type=agent_type, conn=agent_conn):
@@ -216,13 +233,26 @@ class Playbook(object):
             # Provide report for update
             self.agents_connections[agent_name][agent_conn].report = self.report 
    
-            self._create_testcase_run_file_structure(testcase_id=testcase.id)
 
             # Run generic methods (in agent.py) and specific ones
             translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=translated_line)
 
+        # Disconnect all agent (and closed the tracefile)
+        self.disconnect_agents()
+
     ### PRIVATE METHODS ###
+
+    def disconnect_agents(self):
+        """
+        Go through all agent in our connection list,
+        disconnect and close the trace file
+        """
+        log.info("Enter")
+
+        for agent in self.agents_connections:
+            for conn in self.agents_connections[agent]:
+                self.agents_connections[agent][conn].close()
 
     def _create_agent_conn(self, name="", type="", conn=None):
         """
@@ -290,6 +320,11 @@ class Playbook(object):
 
         # Get agent name and connection id from the line
         match = re.search("(?:\s|\t)*(?P<agent>[A-Za-z0-9\-_]+)(?::)(?P<conn>\d+)",line)
+        # Identify the 'message' command
+        match_message = re.search("(\s|\t)*(?:message)(\s|\t)+(?:\")(?P<message>.+)(?:\")",line)
+        # Identify the 'skip all' command
+        match_skip_all = re.search("(\s|\t)*(?:skip all)",line)
+
         if match:
             agent_name = match.group('agent')
             agent_conn =  match.group('conn')
@@ -299,8 +334,22 @@ class Playbook(object):
             agent_type = self.get_agent_type(name=agent_name) 
             log.debug("Found corresponding type={}".format(agent_type))
 
+        elif match_message:
+            message = match_message.group('message')
+            log.debug("message={}".format(message))
+            agent_name = "continue"
+            agent_type = "generic"
+            agent_conn = "0"
+            print("  {}".format(message))
+
+        elif match_skip_all:
+            log.debug("Requested to skip further lines from the testcase")
+            agent_type = "generic"
+            agent_name = "skipall"
+            agent_conn = "0"
+
         else:
-            log.debug("Could not find agent name and connection id={} line={}".format(id, line))
+            log.debug("Could not find agent-less command or agent name and connection id={} line={}".format(id, line))
             print("warning: testcase id={} line={} : can't extract agent name and connection id (format NAME:ID)".format(id, line))
         return (agent_name, agent_type, agent_conn)
 
@@ -364,10 +413,11 @@ class Playbook(object):
 
     def _create_testcase_run_file_structure(self, testcase_id=None):
         """
-        Create the required file structure for a run
+        Delete any old run files and create the required file structure for a run
         ex : playbook_path/PLAYBOOK_NAME/runs/ID
         ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases 
         ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases/TESTCASE_ID
+
         Requirement: run id, playbook name
         """
         log.info("Enter with testcase_id={}".format(testcase_id))
@@ -391,8 +441,14 @@ class Playbook(object):
         path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
         p = Path(path)
         p.mkdir(parents=True, exist_ok=True)
-
         log.debug("Create if needed path={}".format(path))
+
+        old_run_logs = path+"/*.log"
+        if os.path.exists(path):
+            filelist = glob.glob(old_run_logs)
+            for f in filelist:
+                log.debug("Delete old run {} log file {}".format(self.run, f))
+                os.remove(f)
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

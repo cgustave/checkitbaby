@@ -34,6 +34,9 @@ class Fortigate_agent(Agent):
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
+        else:
+            self.debug = False
+            log.basicConfig(level='ERROR')
 
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
@@ -55,11 +58,11 @@ class Fortigate_agent(Agent):
         self._connected = False  # ssh connection state with the agent
         self._ssh = None         # Will be instanciated with type Vyos
 
+
     def __del__(self):
         """
         Desctructor to close opened connection to agent when exiting
         """
-        log.info("Enter")
         if self._ssh:
             self._ssh.close()
 
@@ -89,22 +92,16 @@ class Fortigate_agent(Agent):
         Process get commands
         """
         log.info("Enter with line={}".format(line))
-
-        # Connect to agent if not already connected
-        if not self._connected:
-            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            success = self.connect(type='fortigate')
-        
-            if not success:
-                log.error("Could not connect to FortiGate. Won't get information, continue scenario.")
-                return False
+        self._connect_if_needed(stop_on_error=False)
 
         # get version
-        match_version = re.search("get\sversion", line)
+        match_version = re.search("get\sstatus", line)
         if match_version:
              if not self.dryrun:
-                 version = self._ssh.get_version()
-                 self.add_report_entry(get='version', result=version) 
+                 result = self._ssh.get_status()
+                 log.debug("==> result={}".format(result))
+                 self.add_report_entry(get='version', result=result['version']) 
+                 self.add_report_entry(get='license', result=result['license']) 
              else:
                  log.debug("dry-run")
         else:
@@ -127,6 +124,8 @@ class Fortigate_agent(Agent):
               self._cmd_check_session(name=name, line=line)
           elif command == 'bgp':
               self._cmd_check_bgp(name=name, line=line)
+          elif command == 'status':
+              self._cmd_check_status(name=name, line=line)
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
               raise SystemExit
@@ -151,17 +150,8 @@ class Fortigate_agent(Agent):
         log.info("Enter with name={} line={}".format(name, line))
         
         found_flag = False
-
-        # Connect to agent if not already connected
-        if not self._connected:
-            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            success = self.connect(type='fortigate')
-            log.debug("connection success={}".format(success))
-
-            if not success:
-                log.error("Could not connect to FortiGate {} to extract session. Abort scenario.".format(self.name))
-                raise SystemExit
-        
+        self._connect_if_needed()
+       
         # Query for bgp routes    
         result = self._ssh.get_bgp_routes()
         log.debug("Found result={}".format(result))
@@ -194,7 +184,66 @@ class Fortigate_agent(Agent):
 
         return found_flag
 
+    def _connect_if_needed(self, stop_on_error=True):
+        """
+        Connects to fortigate if not already connected
+        if stop_on_error is True, exit if connection could not be established
+        """
+        # Connect to agent if not already connected
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            success = self.connect(type='fortigate')
+            log.debug("connection success={}".format(success))
 
+            if not success:
+                if stop_on_error: 
+                   log.error("Could not connect to FortiGate {} aborting scenario ".format(self.name))
+                   raise SystemExit
+                else:
+                   log.error("Could not connect to FortiGate {} but continue scenario ".format(self.name))
+
+
+    def _cmd_check_status(self, name="", line=""):
+        """
+        Check on fortigate get system status command
+        - license is valid
+        """
+        log.info("Enter with name={} line={}".format(name, line))
+        found_flag = False
+        self._connect_if_needed(stop_on_error=True)
+        if not self.dryrun:
+            result = self._ssh.get_status()
+            license = result['license']
+            version = result['version']
+            # Use this opportunity to record firmware as 'get' value
+            self.add_report_entry(get='version', result=result['version']) 
+            log.debug("found license={} version={}".format(license, version))
+        else:
+            log.debug("dry-run")
+
+        if result:
+            found_flag = True
+
+        # Without any further requirements, result is pass
+        feedback = found_flag
+
+        # Processing further requirements (has ...)
+        match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+        if match_has:
+            requirements = match_has.group('requirements')
+            log.debug("requirements list: {}".format(requirements))
+            for r in requirements.split():
+                log.debug("requirement: {}".format(r))
+                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                if match_req:
+                    rname = match_req.group('rname')
+                    rvalue = match_req.group('rvalue')
+                    log.debug("Checking requirement {}={}".format(rname, rvalue))
+                    rfdb = self._check_status_requirement(rname=rname, rvalue=rvalue, result=result)
+                    feedback = feedback and rfdb
+         
+        self.add_report_entry(check=name, result=feedback)
+        return found_flag
 
     def _cmd_check_session(self, name="", line=""):
         """
@@ -230,14 +279,7 @@ class Fortigate_agent(Agent):
         log.debug("Prepared session_filter={}".format(session_filter))
 
         # Connect to agent if not already connected
-        if not self._connected:
-            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            success = self.connect(type='fortigate')
-            log.debug("connection success={}".format(success))
-
-            if not success:
-                log.error("Could not connect to FortiGate {} to extract session. Abort scenario.".format(self.name))
-                raise SystemExit
+        self._connect_if_needed()
         
         # Query for session    
         result = self._ssh.get_session(filter=session_filter)
@@ -321,6 +363,28 @@ class Fortigate_agent(Agent):
        
         log.debug("requirements verdict : {}".format(fb))
         return fb
+
+    def _check_status_requirement(self, result={}, rname='', rvalue=''):
+        """
+        Validates status requirement
+        has license=True (be careful with case, true is not True)
+        """
+        log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
+        fb = True  # by default, requirement is met
+        
+        if not 'license' in result:
+            result['license'] = {}
+       
+        if rname=='license':
+            log.debug("Checking license")
+            if str(result['license']) == str(rvalue):
+                log.debug("License requirement is met")
+            else:
+                log.debug("License requirement is not met")
+                fb = False
+
+        return fb
+
 
     def _check_bgp_requirement(self, result={}, rname='', rvalue=''):
         """

@@ -1,0 +1,51 @@
+### Reset all Vyos routers to base settings
+
+# Uncomment to skip further lines
+# skip all
+
+# Branch 1
+message "set Branch 1 connections delays and losses"
+R1-B1:1 traffic-policy WAN delay 10 loss 0
+R2-B1:1 traffic-policy WAN delay 10 loss 0
+R3-B1:1 traffic-policy WAN delay 10 loss 0
+R-MPLS:1 traffic-policy B1MPLS delay 5 loss 0
+
+# Branch 2
+message "set Branch 2 connections delays and losses"
+R1-B2:1 traffic-policy WAN delay 10 loss 0
+R2-B2:1 traffic-policy WAN delay 10 loss 0
+R-MPLS:1 traffic-policy B2MPLS delay 5 loss 0
+
+# Hub
+message "set Hub connections delays and losses"
+R-H1:1 traffic-policy ISP1 delay 0 loss 0
+R-H1:1 traffic-policy ISP2 delay 0 loss 0
+R-MPLS:1 traffic-policy H1MPLS delay 0 loss 0
+
+
+### Link up all FPOC links
+
+# Branch 1
+message "link up Branch 1 ports"
+fpoc:1 link up FGT-B1-1 port1
+fpoc:1 link up FGT-B1-1 port2
+fpoc:1 link up FGT-B1-1 port3
+fpoc:1 link up FGT-B1-1 port4
+fpoc:1 link up FGT-B1-1 port5
+
+# Branch 2
+message "link up Branch 2 ports"
+fpoc:1 link up FGT-B2-9 port1
+fpoc:1 link up FGT-B2-9 port2
+fpoc:1 link up FGT-B2-9 port4
+fpoc:1 link up FGT-B2-9 port5
+
+# Hub
+message "link up Hub ports"
+fpoc:1 link up FGT-H1-253 port1
+fpoc:1 link up FGT-H1-253 port2
+fpoc:1 link up FGT-H1-253 port4
+fpoc:1 link up FGT-H1-253 port5
+
+
+
