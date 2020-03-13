@@ -1,11 +1,10 @@
 {
-    "result": false,
+    "result": true,
     "testcases": {
-        "003": {
-            "result": false,
+        "004": {
+            "result": true,
             "check": {
-                "tcp_forward": false,
-                "tcp_reply": false
+                "sdwan_1_member1_sla": true
             },
             "get": {}
         }

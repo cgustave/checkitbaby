@@ -17,9 +17,15 @@ log.basicConfig(
     level=log.DEBUG)
 
 playbook = sys.argv[1]
+testcase = None
+
 if not playbook:
-    print("Usage: ./run_playbook.py <playbookName>")
+    print("Usage: ./run_playbook.py <playbookName> [<tescase_id>]")
     raise SystemExit
+
+if (len(sys.argv)>2):
+   testcase = sys.argv[2]
+   print ("Running testcase {} only".format(testcase))
 
 # Default Run id
 run=1
@@ -31,10 +37,14 @@ log.info("Starting run_playbook.py with playbook={} run={}".format(playbook,run)
 #dr.load_playbook(name=playbook, dryrun=True)
 #dr.run_all_testcases(run=run)
 
-print("Running playbook {} on run {}".format(playbook, run))
+print("Running playbook {} on run {} [testcase {}]".format(playbook, run, testcase))
 tr = Testrunner(path='./playbooks', debug=True)
 tr.load_playbook(name=playbook, dryrun=False)
-tr.run_all_testcases(run=run)
 
-print("report={}".format(tr.run_report()))
+if testcase:
+    tr.run_testcase(run=run, id=testcase)
+    print("report={}".format(tr.run_report()))
 
+else:
+    tr.run_all_testcases(run=run)
+    print("report={}".format(tr.run_report()))

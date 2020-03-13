@@ -107,6 +107,7 @@ class Testrunner(object):
         Returns True in no exception is caught
         """
         log.info("Enter with run={} id={}".format(run, id))
+        self.playbook.run_testcases(id=id)
 
     def run_report(self, run='1'):
         """

@@ -1,0 +1,7 @@
+# Checking basic connectivity between branches
+
+message "Checking sdwan service"
+
+FGT-B1-1:1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1
+
+

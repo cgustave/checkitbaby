@@ -160,26 +160,31 @@ class Playbook(object):
 
         return result
 
-    def run_testcases(self):
+    def run_testcases(self, id=None):
         """
         Requirements : playbook should have been registered (and ideally verify_agents)
         run attributs should be set
+        Optional : testcase id (if none provided, all testcases are run)
         """
         log.info("Enter")
         for tc in self.testcases:
+            if id:
+                if tc.id != id:
+                    continue
+
             log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
             self.run_testcase(testcase=tc)
 
     def run_testcase(self, testcase=None):
         """
         Run one testcase.
+        Attribute : a testcase object
         Process each line of the scenario, for each line :
           - extract agent name and connection, create a new agent if first time seen
           - call generic processing (same for all agent), from agent.py
           - call agent specific processing
         """
-        log.info("Enter")
-        log.debug("Testcase id={} name={}".format(testcase.id, testcase.name))
+        log.info("Enter with Testcase id={} name={}".format(testcase.id, testcase.name))
         print("* Starting {} - {}".format(testcase.id, testcase.name)) 
 
         # remove old run logfiles and create run filestructure if needed

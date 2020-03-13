@@ -63,8 +63,8 @@ class Fortigate_agent(Agent):
         """
         Desctructor to close opened connection to agent when exiting
         """
-        if self._ssh:
-            self._ssh.close()
+        #if self._ssh:
+        #    self._ssh.close()
 
     def process(self, line=""):
         """
@@ -126,6 +126,8 @@ class Fortigate_agent(Agent):
               self._cmd_check_bgp(name=name, line=line)
           elif command == 'status':
               self._cmd_check_status(name=name, line=line)
+          elif command == 'sdwan':
+              self._cmd_check_sdwan(name=name, line=line)
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
               raise SystemExit
@@ -426,7 +428,90 @@ class Fortigate_agent(Agent):
 
         log.debug("requirements verdict : {}".format(fb))
         return fb
- 
+
+    def _cmd_check_sdwan(self, name="", line=""):
+        """
+        Checks on sdwan feature
+        - member selected from sdwan rule :  
+
+            FGT-B1-1 # diagnose sys virtual-wan-link service 1
+			Service(1): Address Mode(IPV4) flags=0x0
+			  Gen(1), TOS(0x0/0x0), Protocol(0: 1->65535), Mode(sla)
+			  Service role: standalone
+			  Member sub interface:
+			  Members:
+				1: Seq_num(1 vpn_isp1), alive, sla(0x1), cfg_order(0), cost(0), selected
+				2: Seq_num(2 vpn_isp2), alive, sla(0x1), cfg_order(1), cost(0), selected
+				3: Seq_num(3 vpn_mpls), alive, sla(0x1), cfg_order(2), cost(0), selected
+			  Src address:
+					10.0.1.0-10.0.1.255
+
+			  Dst address:
+					10.0.2.0-10.0.2.255
+
+			FGT-B1-1 #
+
+            - check alive members :
+               ex : FGT-B1-1 check [sdwan_1_member1_alive] sdwan service 1 member 1 has state=alive
+            - check sla value for a particular member
+               ex : FGT-B1-1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1 
+            - check preferred member 
+              ex :  FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1  
+	    """
+
+        log.info("Enter with name={} line={}".format(name, line))
+
+        line_no_requirement = line
+        line_no_requirement = line.split('has')[0]
+        log.debug("line_no_requirement={}".format(line_no_requirement))
+
+        match_command = re.search("sdwan\s+service\s(?P<rule>\d+)\s+member\s+(?P<seq>\d+)", line_no_requirement)
+        if match_command:
+            rule = match_command.group('rule') 
+            seq = match_command.group('seq') 
+            log.debug("matched sdwan service rule={} member seq={}".format(rule, seq))
+            self._connect_if_needed()
+
+            # Query SDWAN service
+            result = self._ssh.get_sdwan_service(service=rule)
+            print("toto={}".format(result))
+            if result:
+                if len(result['members']) >= 1:
+                    log.debug("At least 1 member was found")
+                    found_flag = True
+
+            # Without any further requirements, result is pass
+            feedback = found_flag
+
+            # Processing further requirements (has ...)
+            match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+            if match_has:
+                requirements = match_has.group('requirements')
+                log.debug("requirements list: {}".format(requirements))
+                for r in requirements.split():
+                    log.debug("requirement: {}".format(r))
+                    match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                    if match_req:
+                        rname = match_req.group('rname')
+                        rvalue = match_req.group('rvalue')
+                        log.debug("Checking requirement {}={}".format(rname, rvalue))
+                        rfdb = self._check_sdwan_service_requirement(rname=rname, rvalue=rvalue, result=result)
+                        feedback = feedback and rfdb
+            self.add_report_entry(check=name, result=feedback)
+            return found_flag
+
+    def _check_sdwan_service_requirement(self, result={}, rname='', rvalue=''):
+        """
+        Validates all requirements for sdwan service
+        """
+        log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
+
+        fb = True  # by default, requirement is met
+        log.debug("requirements verdict : {}".format(fb))
+        return fb
+
+
+
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")
 
