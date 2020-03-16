@@ -168,12 +168,14 @@ class Fortigate_agent(Agent):
         feedback = found_flag
 
         # Processing further requirements (has ...)
-        match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
             requirements = match_has.group('requirements')
             log.debug("requirements list: {}".format(requirements))
+            rnum = 0 
             for r in requirements.split():
-                log.debug("requirement: {}".format(r))
+                rnum = rnum + 1
+                log.debug("requirement No={} : {}".format(rnum, r))
                 match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
                 if match_req:
                     rname = match_req.group('rname')
@@ -230,7 +232,7 @@ class Fortigate_agent(Agent):
         feedback = found_flag
 
         # Processing further requirements (has ...)
-        match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
             requirements = match_has.group('requirements')
             log.debug("requirements list: {}".format(requirements))
@@ -289,18 +291,21 @@ class Fortigate_agent(Agent):
 
         # See if at least one session was found
         if result:
-            if result['total'] == 1:
+            if result['total'] == '1':
                 log.debug("1 session was found")
                 found_flag = True
+            if result['total'] == '0':
+                log.warning("no session foud")
+                found_flag = False
             else:
-                log.warning("number of sessions found {}".format(result['total']))
+                log.warning("Multiple sessions found num={}".format(result['total']))
                 found_flag = True
 
         # Without any further requirements, result is pass
         feedback = found_flag
 
         # Processing further requirements (has ...)
-        match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
             requirements = match_has.group('requirements')
             log.debug("requirements list: {}".format(requirements))
@@ -349,16 +354,9 @@ class Fortigate_agent(Agent):
             else :
                 log.debug("state {} is not set, requirement is not met".format(rvalue))
                 fb = False
-
         elif rname in ('src','dest','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total'):
             log.debug("Accepted requirement rname={}".format(rname))
-            if rname in result:
-                if result[rname] == rvalue:
-                    log.debug("rname={} found : requirement is met".format(rname))
-                    fb = True
-                else :
-                    log.debug("rname={} found : requirement is not met".format(rname))
-                    fb = False
+            fb = self.check_generic_requirement(result=result, rname=rname, rvalue=rvalue)
         else:
             log.error("unknown session requirement {}={}".format(rname, rvalue))
             raise SystemExit
@@ -474,7 +472,6 @@ class Fortigate_agent(Agent):
 
             # Query SDWAN service
             result = self._ssh.get_sdwan_service(service=rule)
-            print("toto={}".format(result))
             if result:
                 if len(result['members']) >= 1:
                     log.debug("At least 1 member was found")
@@ -484,33 +481,76 @@ class Fortigate_agent(Agent):
             feedback = found_flag
 
             # Processing further requirements (has ...)
-            match_has = re.search("\s+has\s+(?P<requirements>\S+)",line)
+            match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
             if match_has:
                 requirements = match_has.group('requirements')
                 log.debug("requirements list: {}".format(requirements))
+                rnum = 0
                 for r in requirements.split():
-                    log.debug("requirement: {}".format(r))
+                    rnum = rnum + 1
+                    log.debug("requirement num={} : {}".format(rnum, r))
                     match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
                     if match_req:
                         rname = match_req.group('rname')
                         rvalue = match_req.group('rvalue')
                         log.debug("Checking requirement {}={}".format(rname, rvalue))
-                        rfdb = self._check_sdwan_service_requirement(rname=rname, rvalue=rvalue, result=result)
+                        rfdb = self._check_sdwan_service_requirement(seq=seq, rname=rname, rvalue=rvalue, result=result)
                         feedback = feedback and rfdb
             self.add_report_entry(check=name, result=feedback)
             return found_flag
 
-    def _check_sdwan_service_requirement(self, result={}, rname='', rvalue=''):
+
+    def _check_sdwan_service_requirement(self, seq='', result={}, rname='', rvalue=''):
         """
         Validates all requirements for sdwan service
         """
-        log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
-
+        log.info("Enter with seq={} rname={} rvalue={} result={}".format(seq, rname, rvalue, result))
         fb = True  # by default, requirement is met
+
+        # Checking member is preferred
+        # Extract seq from 1st member and see if its our
+        if rname == 'preferred':
+            if '1' in result['members']:
+                pref_member_seq = result['members']['1']['seq_num']
+                log.debug("Preferred member seq_num={}".format(pref_member_seq))
+                if pref_member_seq == seq:
+                    log.debug("requirement is fullfilled".format(rvalue))
+                    fb = True
+                else:
+                    log.debug("requirement is not fullfilled")
+                    fb = False
+            else:
+                log.error("No members found in 1st position")
+                fb = False
+
+        elif rname in ('status','sla'):
+            log.debug("Accepted requirement rname={} checking member={} detail={}".format(rname, seq, result['members'][seq]))
+            fb = self.check_generic_requirement(result=result['members'][seq], rname=rname, rvalue=rvalue)
+        else:
+            log.error("unknown requirement")
+            raise SystemExit
+
         log.debug("requirements verdict : {}".format(fb))
         return fb
 
-
+    def check_generic_requirement(self, result={}, rname="", rvalue=""):
+        """
+        Generic requirement check
+        Returns True or False
+        """
+        log.info("Enter with rname={} rvalue={}".format(rname,rvalue))
+        if rname in result:
+            if result[rname] == rvalue:
+                 log.debug("rname={} found : requirement is met".format(rname))
+                 fb = True
+            else :
+                 log.debug("rname={} found : requirement is not met".format(rname))
+                 fb = False
+        else:
+            log.error("requirement {} is not in result={}".format(rname, result))
+            fb = False
+        return fb
+ 
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

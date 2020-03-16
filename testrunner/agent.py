@@ -218,8 +218,8 @@ class Agent(object):
 
     def connect(self, type=''):
         """
-        Connect to vyos agent without sending any command
-        This opens the ssh channel for data exchange
+        Connect to agent without sending any command
+        This opens the ssh channel for data exchange and tracefile
         """
         log.info("Enter with type={}".format(type))
         ip = self.agent['ip']
