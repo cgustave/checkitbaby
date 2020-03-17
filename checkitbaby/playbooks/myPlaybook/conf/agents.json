@@ -1,0 +1,44 @@
+{
+	"clt-1" : {
+				"type" : "lxc",
+				"ip" : "192.168.0.2",
+				"port" : 22,
+				"login" : "root",
+				"password" : "fortinet",
+				"ssh_key_file" : ""
+	},
+
+	"srv-1" : {
+				"type" : "lxc",
+				"ip" : "192.168.0.3",
+				"port" : 22,
+				"login" : "root",
+				"password" : "fortinet",
+				"ssh_key_file" : ""
+			  },
+	"rt-1" : {
+		        "type" : "vyos",
+				"ip" : "192.168.0.4",
+				"port" : 22,
+				"login" : "vyos",
+				"password" : "vyos",
+				"ssh_key_file" : ""
+	         },
+	"rt-2" : {
+		        "type" : "vyos",
+				"ip" : "192.168.0.5",
+				"port" : 22,
+				"login" : "vyos",
+				"password" : "vyos",
+				"ssh_key_file" : ""
+	         },
+	"rt-3" : {
+		        "type" : "vyos",
+				"ip" : "192.168.0.6",
+				"port" : 22,
+				"login" : "vyos",
+				"password" : "vyos",
+				"ssh_key_file" : ""
+	         }
+
+}

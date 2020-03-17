@@ -1,0 +1,2 @@
+fpoc:1 link down FGT-B1-1 port1
+fpoc:1 link up FGT-B1-1 port1

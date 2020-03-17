@@ -1,8 +1,8 @@
-# Testrunner
+# Checkitbaby 
 
 ## Definition
 
-Testrunner is a tool to allow automatic tests validations in a lab.
+Checkitbaby is a tool to allow automatic tests validations in a lab.
 It uses 'agents' to interact with the setup for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
 
 *Playbooks* are defined as a collection of *Testcases*, each testcase is a simple text file where each lines defines an action applied to an *Agent*.
@@ -14,9 +14,9 @@ During testcases execution, all *Run* information such as agent ouputs are colle
 When all the testcases from a Playbook has run, a *Report* in a json format is delivered. The report is organized by testcases and include all checks results from the testcase.
 A general Pass/Fail covering all testcases is also included.  
 
-Testrunner can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in *Dry-Run* mode to only validate the scenario file syntax for staging.  
+Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in *Dry-Run* mode to only validate the scenario file syntax for staging.  
 
-Testrunner focus is to run against FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC)  
+Checkitbaby focus is to run against FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC)  
 
 
 ## Installation

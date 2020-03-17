@@ -1,0 +1,17 @@
+# Opens a tcp connection
+
+srv-1:1 open tcp 80
+srv-1:1 mark "server ready"
+
+clt-1:1 connect tcp 1.1.1.1 80 
+clt-1:1 send "alice"
+
+srv-1:1 check [srv recv] data receive "alice" since "server ready"
+
+clt-1:1 mark "client ready"
+
+srv-1:1 send "bob"
+
+clt-1:1 check [clt recv] data receive "bob" since "client ready"
+clt-1:1 close 
+

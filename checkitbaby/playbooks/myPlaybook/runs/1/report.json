@@ -1,0 +1,12 @@
+{
+	"playbook" : "myPlaybook",
+	"run" : "1",
+	"result" : "pass",
+
+	"testcases" : {
+		"1" : {
+
+		}
+	}
+}
+

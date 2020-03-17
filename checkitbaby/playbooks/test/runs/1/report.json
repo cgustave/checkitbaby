@@ -1,0 +1,13 @@
+{
+    "result": true,
+    "testcases": {
+        "001": {
+            "result": true,
+            "check": {
+                "origin": true,
+                "reply": true
+            },
+            "get": {}
+        }
+    }
+}
