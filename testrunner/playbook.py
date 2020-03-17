@@ -9,6 +9,7 @@ import os
 import glob
 import re
 import json
+import time
 from pathlib import Path
 from testcase import Testcase
 from lxc_agent import Lxc_agent
@@ -206,6 +207,11 @@ class Playbook(object):
                 log.debug("Generic agent, skipall request")
                 break
 
+            if agent_type == "generic" and agent_name == "wait":
+                log.debug("Generic agent, wait request")
+                self._process_wait(line=line)
+                continue
+
             # Create new agent connection if needed
             if self._create_agent_conn(name=agent_name, type=agent_type, conn=agent_conn):
                 log.debug("Agent created")
@@ -238,7 +244,6 @@ class Playbook(object):
             # Provide report for update
             self.agents_connections[agent_name][agent_conn].report = self.report 
    
-
             # Run generic methods (in agent.py) and specific ones
             translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
             self.agents_connections[agent_name][agent_conn].process(line=translated_line)
@@ -329,6 +334,8 @@ class Playbook(object):
         match_message = re.search("(\s|\t)*(?:message)(\s|\t)+(?:\")(?P<message>.+)(?:\")",line)
         # Identify the 'skip all' command
         match_skip_all = re.search("(\s|\t)*(?:skip all)",line)
+        # Identify the 'wait' command
+        match_wait = re.search("(\s|\t)*(?:wait)",line)
 
         if match:
             agent_name = match.group('agent')
@@ -351,6 +358,12 @@ class Playbook(object):
             log.debug("Requested to skip further lines from the testcase")
             agent_type = "generic"
             agent_name = "skipall"
+            agent_conn = "0"
+
+        elif match_wait:
+            log.debug("wait request")
+            agent_type = "generic"
+            agent_name = "wait"
             agent_conn = "0"
 
         else:
@@ -454,6 +467,25 @@ class Playbook(object):
             for f in filelist:
                 log.debug("Delete old run {} log file {}".format(self.run, f))
                 os.remove(f)
+
+
+    def _process_wait(self, line=""):
+        """
+        Wait for the given number of seconds
+        """
+        log.info("Enter with line={}".format(line))
+        match = re.search("(\s|\t)*(?:wait)(\s|\t)+(?P<seconds>\d+)",line)
+        if match:
+            seconds = match.group('seconds')
+            log.debug("seconds={}".format(seconds))
+            if not self.dryrun:
+                log.debug("Start sleeping for {} seconds...".format(seconds))
+                time.sleep(int(seconds))
+                log.debug("End sleeping, resuming")
+        else:
+            log.debug("could not extract seconds to wait")
+            raise SystemExit
+
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_testrunner.py\n")

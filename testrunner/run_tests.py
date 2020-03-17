@@ -33,6 +33,6 @@ echo
 echo "======================================================================"
 echo "= DOCUMENTATION                                                      ="
 echo "======================================================================"
-python3 -m pydoc "$NAME"  > README.md
+python3 -m pydoc "$NAME"  > DOCUMENTATION.md
 
 echo "" >> debug.log

@@ -84,8 +84,33 @@ class Fortigate_agent(Agent):
             self.cmd_get(line)
         elif command == 'check':
              self.cmd_check(line) 
+        elif command == 'flush':
+            self.cmd_flush(line)
         else:
             log.warning("command {} is unknown".format(command))
+
+    def cmd_flush(self, line=""):
+        """
+        Process flush command:
+          - flush ike gateway
+        """
+        log.info("Enter with line={}".format(line))
+        match_command = re.search("flush\s+(?P<command>\w+)\s+(?P<subcommand>\w+)", line)
+        if match_command:
+            command = match_command.group('command')
+            subcommand = match_command.group('subcommand')
+            log.debug("Matched with command={} subcommand={}".format(command,subcommand))
+            if command == 'ike' and subcommand == 'gateway':
+                log.debug("vpn ike gateway flush requested")
+                self._connect_if_needed()
+                self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
+            else:
+                log.error("unknown combination of command={} subcommand={}".format(command, subcommand))
+                raise SystemExit
+        else:
+            log.debug("No command has matched")
+         
+
 
     def cmd_get(self, line=""):
         """
@@ -128,12 +153,64 @@ class Fortigate_agent(Agent):
               self._cmd_check_status(name=name, line=line)
           elif command == 'sdwan':
               self._cmd_check_sdwan(name=name, line=line)
+          elif command == 'ike':
+              self._cmd_check_ike(name=name, line=line)
+
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
               raise SystemExit
         else:
            log.error("Could not understand check command syntax")
            raise SystemExit
+
+    def _cmd_check_ike(self, name="", line=""):
+        """
+        ike status:
+        Checks on IPsec ike status (from 'diagnose vpn ike status'), examples:
+          FGT-B1-1:1 check [B1_tunnels] ike status has ike_created=3
+          FGT-B1-1:1 check [B1_tunnels] ike status has ike_created=3 ike_established=3
+          FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
+        """
+        log.info("Enter with name={} line={}".format(name, line))
+
+        found_flag = False
+        self._connect_if_needed()
+        result = self._ssh.get_ike_and_ipsec_sa_number()
+        if result:
+            found_flag = True
+
+            # Without any further requirements, result is pass
+            feedback = found_flag
+
+            # Processing further requirements (has ...)
+            match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
+            if match_has:
+                requirements = match_has.group('requirements')
+                log.debug("requirements list: {}".format(requirements))
+                rnum = 0
+                for r in requirements.split():
+                    rnum = rnum + 1
+                    log.debug("requirement num={} : {}".format(rnum, r))
+                    match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                    if match_req:
+                        rname = match_req.group('rname')
+                        rvalue = match_req.group('rvalue')
+                        log.debug("Checking requirement {}={}".format(rname, rvalue))
+                        if rname == 'ike_created':
+                            rfdb = self.check_generic_requirement(rname='created', rvalue=rvalue, result=result['ike'])
+                        elif rname == 'ike_established':
+                            rfdb = self.check_generic_requirement(rname='established', rvalue=rvalue, result=result['ike'])
+                        elif rname == 'ipsec_create':
+                            rfdb = self.check_generic_requirement(rname='created', rvalue=rvalue, result=result['ipsec'])
+                        elif rname == 'ipsec_established':
+                            rfdb = self.check_generic_requirement(rname='established', rvalue=rvalue, result=result['ike'])
+                        else:
+                            log.error("unrecognized requirement")
+                            raise SystemExit
+
+                        feedback = feedback and rfdb
+            self.add_report_entry(check=name, result=feedback)
+            return found_flag
 
     def _cmd_check_bgp(self, name="", line=""):
         """
@@ -253,7 +330,7 @@ class Fortigate_agent(Agent):
         """
         Checks on fortigate session :
         - session exist
-          ex : FGT-B1-1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.
+          ex : FGT-B1-1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.1
         - session has flag 'dirty'
           ex : FGT-B1-1 check [session_is_dirty] session filter dport=5000 has flag=dirty
         """
@@ -382,7 +459,6 @@ class Fortigate_agent(Agent):
             else:
                 log.debug("License requirement is not met")
                 fb = False
-
         return fb
 
 

@@ -4,8 +4,10 @@
         "003": {
             "result": true,
             "check": {
-                "bgp_check": true,
-                "session": true,
+                "B1_tunnels": true,
+                "B2_tunnels": true,
+                "B1_bgp_check": true,
+                "B1_session": true,
                 "tcp_forward": true,
                 "tcp_reply": true
             },

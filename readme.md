@@ -1,423 +1,280 @@
-#### Collecting ideas
+# Testrunner
 
-- Could be called "Check-it-baby"
+## Definition
 
-##### Objectives
+Testrunner is a tool to allow automatic tests validations in a lab.
+It uses 'agents' to interact with the setup for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
 
-- can run in FortiPoc LXC and drive LXC, vyos, fortigate, fpoc
-- relies on netcontrol for device communication
-- netcontrol now supports :
-	- file tracing : devices ssh communication is dumped to a tracefile
-	- file tracing writing : writing on the tracefile
-	- file tracing marking : Write standardized marks (with timing) on the tracefile
-- analysis of command output done from log trace analysis and using markings for delimeter
-- test scenario should be recipies close to natural human
-- scenario language :
-	- support macros (defined or not in the test playbook) with variables (defined syntax by keyword)
-	- handles multiple devices connections simultaneously
-	- handles multiple connections to the same device
-	- devices referenced by their names, definition of devices should be simple file and movable to a Django DB
-	- keyword 'check' reserved for test assesment, would generate a test result
-    - lines starting with # are comments
-	- tabs or space should be allowed (but not mandatory)
-	- sections are needed, starting with 'start', ending with 'end'.
-		This is needed for playbook, testcase 
-	- variables should be allowed in the playbook. They could be defined in the playbook or (futur) inherited from a DB
+*Playbooks* are defined as a collection of *Testcases*, each testcase is a simple text file where each lines defines an action applied to an *Agent*.
+Each line of the testcase can either trigger an action or get some information and see if some requirements are met (checks).  
+Test scenario syntax is simple and evolutive, commands are defined keywords and depend on the type of agents targeted.  
+Multiple simultaneous connections to agents are supported.  *Variables* are allowed  in testcase. A variable is just a keyword starting with a dollar sign '$' and defined in a variable file. 
+During testcases execution, all *Run* information such as agent ouputs are collected in log files. The test verification would always be done from log file parsing like a human would do. With this, it is possible to easily double-check the test result post-run.  *Marks* can be used as a delimeter for check verification within the agent log file.  
 
-- Test runner :
-	- reads the scenario in the playbook
-	- ability to validate the test definition without running (staging)
-	- spawn the different connections to the devices and keep them alive until closed when asked ('open')
-	- test connection should allow TCP and use simple tools (like netcat)
-	- should be possible to send new data further down on the scenario
-	- a 'check' statement in the scenario would trigger a connection to the device and inspect the tracefile
-	- a command should block until it is done (so the next command is not run too early)
-	- Each testcase of a playbook may generated multiple test results
-	- open connections are automatically closed at the end of the playbook
-	- at the end of the playbook, a result json is provided :
-		{ 'playbook' : playbook_name,
-		  'date'     : timing information
-		  'result'   : pass|fail|unknown
-		  'testcases' : {
-							TestCase_ID : [
-											 CHECK_ID : 'pass',
-											 'FGT-A check [reply packet] sniffer receive reply port port3' : pass,
-											 'FGT-A check [session] session exist' : pass,
-							              [
-		               }
-		}
+When all the testcases from a Playbook has run, a *Report* in a json format is delivered. The report is organized by testcases and include all checks results from the testcase.
+A general Pass/Fail covering all testcases is also included.  
+
+Testrunner can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in *Dry-Run* mode to only validate the scenario file syntax for staging.  
+
+Testrunner focus is to run against FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC)  
 
 
-##### Questions
+## Installation
 
-- Q: is it possible with netcat in listen mode to send data from server to client ?
-  A: yes, netcat -l do this naturally 
-
-
-#### Syntax definition
-
-##### LXC Connections
-Open, connect, close connections and send data
-Each action should generate automatically a mark for analysis.
-
-- Open a tcp server :							LXC-1:1 open tcp <port>
-												LXC-1:1 mark "server ready"
-- Connect to a tcp server :						LXC-2:1 connect tcp <ip> <port>
-- Send data on tcp connection from client :		LXC-2:1 data send "alice"
-- Check data is received server :				LXC-1:1 check [server receive] data receive "alice" since "server ready"
-												LXC-2:1 mark "client ready"
-- Send data on tcp connection from server :     LXC-1:1 data send "bob"
-- Check data is received on client :			LXC-2:1 check [client receive] data receive "bob" since "client ready"
-- Close a tcp socket from client:				LXC-1:1 close tcp
+Will be deliver as python package (to be done)
+* Requirements : netcontrol python library: `pip install -I netcontrol`
 
 
-Note : 
- - confirmation : netcat in listen mode (-l) allows to send STDIN chars to client side so both client and serveur can issue traffic
- - use syntax check data receive PATERN since MARK where MARK delimits the search start on the log file from a mark issued by command 'mark'
+## Organization
 
-##### VYOS
-Interact with vyos router
+#### File tree structure
 
-* network-emulator
+The following directory tree structure is used to organize the tests :
 
-- Set network emulator delay:			R1 network-emulator WAN delay 10
-- Set network emulator packet loss:		R1 network-emulator WAN loss 1
-
-
-
-##### FortiPoC
-Interact with FortiPoC
-
-- Bring port UP				: fpoc link up FGT-1 port1
-- Bring port DOWN			: fpoc link down FGT-1 port1
-
-
-##### FortiGate
-Interact with FortiGate device
-
-
-###### Sessions
-
-- Checks a session exists on the FortiGate:	
-	
-	FGT-A:1 session filter clear
-	FGT-A:1 session dst 8.8.8.8
-	FGT-A:1 session dport 80
-	FGT-A:1 check [session exist] session exist
-
-- Check session duration is over a minimum :		FGT-A:1 session check duration over 10
-- Check session flag :								FGT-A:1 session check flag dirty
-
-
-###### Sniffer
-
-	FGT-A:1 sniffer start any "host 1.1.1.1"			- append sniffer start mark
-	FGT-A:1 sniffer stop                                - append sniffer stop mark
-	FGT-A:1 check [sniffer reply port3] sniffer receive reply port port3      - check between start and stop mark (if no stop mark, check till eof)
-
-
-
-###### IPsec tunnel
-
-###### Routing table
-
-- Check a route exist
-
-	FGT-A:1 check [route ok] routing table bgp 10.0.0.0/24 next-hop 1.1.1.1 interface port1
-
-
-
-##### Marks management
-Add marks in the tracefile.
-Marks could be used to define the scope of a text analysis in the tracefile (regexp)
-
-
-
-##### Variable management:
-
-- set a variable from the playbook :	set <variable> "value"
-- use a variable :						#variable# 
-
-
-##### Analysis
-- Check pattern was received on tcp :	DEVICE:INSTANCE check receive <pattern> 
-	check receive checks <pattern> exists in the tracefile from the mark of the session opening
-	generates a result for the running playbook/testcase : PASS if pattern is received otherwise FAIL
-
-
-##### Macros definition
-Macros can be used by their name in a playbook file to simplify the writing of a testcase
-Macros may involve multiple instances (provided as parameter)
-
-Ex : macro start CHECK_TCP_CONNECTION <server_name_and_instance> <server_ip> <server_port> <client_name_and_instance> 
-
-
-##### Example of testcase from a playbook
-
-# Author: cgustave
-# Date : xx/xx/xx
-# Purpose : blabla
-
-description : "Check two-way tcp connectivity between client and server"
-
-# Define testcase variables
-set CLIENTIP "10.0.0.1"
-set SERVERIP "10.0.1.1"
-set SERVERPORT "80"
-
-# Start server tcp check
-lxc-2:1 open tcp #SERVERPORT"
-lxc-2:1 mark "start"
-
-# Client connect to server
-lxc-1:1 connect tcp #SERVERIP# #SERVERPORT#  
-lxc-1:1 mark "start"
-
-# Client to server check
-lxc-1:1 send "ALICE"
-lxc-2:1 check [1] receive "ALICE" since "start"
-
-# Server to client check
-lxc-2:1 send "BOB"
-lxc-1:1 check [2] receive "BOB" since "start"
-
-# Disconnect
-lxc-1:1 close
-
-##### objects models
-
-class Testrunner(object)
-    """
-	Main application
-	A testrunner contains :
-	   - mutliple test agents with their definitions
-	   - a single playbook containing the testcases
-	   - a report structure filled from the testcases when run
-
-	Directory structure
-	/PLAYBOOK_BASE_PATH : The base name of the playbook location
+- Directory structure:
+~~~
+/PLAYBOOK_BASE_PATH : The base name of the playbook location
 	  ex : /fortipoc/playbooks
 
-	/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
 	  ex : /fortipoc/playbooks/advpn
 
-	/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/agents.conf  : files with agents definitions
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/agents.conf  : files with agents definitions
 	  ex : /fortipoc/playbooks/advpn/agents.conf
 
-	/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases    : directory containing testcases
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/variables.conf :  files with variables definitions
+	  ex : /fortipoc/playbooks/advpn/variables.conf
+
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases    : directory containing testcases
 	  ex : /fortipoc/playbooks/advpn/testcases
 
-	/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases/NNN_TESTCASE_NAME : one testcase file
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases/NNN_TESTCASE_NAME : one testcase file
 	                                   with NNN : a number starting from 000 (to order testcases)
 									        TESTCASE_NAME : any name for the testcase
 
       ex : /fortipoc/playbooks/advpn/testcases/001_spoke_to_hub_connectivity.txt
       ex : /fortipoc/playbooks/advpn/testcases/002_spoke_ipsec_tunnel.txt
       ex : /fortipoc/playbooks/advpn/testcases/003_spoke_routing.txt
-	
-	
+~~~
 
+* Creating a new playbook:
 
-	"""
-
-    def __init__(self, playbook_name="playbook"):
-        """
-		playbook_name : directory name where playbook files are stored (agents and testcases)
-		"""
-	    self.playbook = Playbook()
-	    self.agents = {}      # dictionary of agent (keys are agents name)
-		self.report = {}      # dictionary of reports (keys are reports name)
-
-    def load_agents(self):
-	    """
-		Load all agent with their details
-		Agents are stored in a file ? agents.conf
-		Could then be stored in django DB table 'Agent'
-		"""
-
-	def get_agents(self):
-	    """
-		Requirements : previous call to load_agents
-		Returns : dictionnary of agent (key agent name) to feed playbook
-		"""
-
-	def load_playbook(directory=""):
-	    """
-		Load the playbook represented by the directory
-		Directory contains all testcases (one file per testcase)
-		"""
-
-	def run(self):
-	    """
-		Run the playbook
-		"""
-
-	def report(self):
-	    """
-		Provide a report from the run results
-		"""
-
-
-class Playbook(object):
-    """
-	A playbook is a collection of test cases
-	It references agents but don't define them
-	"""
-
-	def __init__(self, description='', directory=''):
-
-	    self.description = description  
-	    self.directory = directory
-	    self.testcases = []  
-		self.agents = {}     # dictionnary by agent name
-
-	def add_agent(self, name='', type='', ):
-	    """
-		Adds an agent to our list of agent
-		Agent information should be retrieved as a dictionnary from Testrunner
-		"""
-
-	def load(self):
-	    """ 
-		Loads the testcases from the playbook directory. 
-	    Each files from the directory with extension ".test" is a testcase
-		Calls Testcase.load for each file
-		Adds each testcase to the list testcase list 
-		Loads all agents details (from file then later from Django DB)
-		"""
-
-		self.testcase_list.append
-
-    def list_testcases(self):
-	    """
-		Provide the summary of the loaded testcases
-		"""
-
-
-class Testcase(object):
-    """
-	Defines one testcase.
-	Contains a list of test "agent" (anything we can interact with)
-	"""
-
-	def __init__(self, description=''):
-	    self.description = description   
-		self.variables = {}   # dictionary of variables (keys is the variable name)
-		self.commands = []    # list of command lines 
-
-	def load(self, file=''):
-	    """
-		Load the testcase file.
-		Extract the variables information and load them in the variables dictionary
-		Extract the Agent information and load them in the agents dictionary
-		Extracts all command lines and load then in a list
-		"""
-
-    def add_variable(self, variable=''):
-	    """
-		Adds a variable to our variable dictionary
-		"""
- 
-    def add_commands(self, line):
-	    """
-		Adds command lines to our commands list
-		"""
-
-    def dump(self):
-	    """
-        Returns a json representing the view of the testcase : variables, agents, commands)
-		"""
-
-class Agent(object):
-    """
-	Any device we can interract with is considered a test "agent"
-	It could be an LXC, a Vyos router, a FortiGate
-	An agent has a type, an ip address and access details
-	Multiple connection may exist to the agent so it has a list of connections instances stored in instance_list
-    """
-
-	def __init__(self, type='', ip='', user='', password='', ssh_key_file=''):
-	    self.type = type
-		self.ip = ip
-		self.user = user
-		self.password = password
-		self.ssh_key_file = ssh_key_file
-		self.connections = {}   # This is a dictionary where the key is the instance index 0, 1, 2 ...
-
-	def connect(self):
-	    """
-		Connects a new instance to the agent, add this connection to the connection_list (accessible by index)
-		This should be a generic function common to all types of agent which all use ssh
-		Make sure no connection instance is already exising (if so, don't connect)
-		Returns : True if a new connection was done, false if the connection was already existing
-		"""
-
-    def is_connected(self, instance):
-	    """
-		Returns True if the instance is already connected, otherwise returns False
-		"""
-
-	def close(self):
-	    """
-        Closes the connection instance.
-		Returns True if the connection was existing and was closed. False if no connection instance was existing
-		"""
-
-    def get_instance(self, command_line=""):
-	    """
-		Analyse the given command_line format <AGENT>:<INSTANCE> XXXX
-		returns : instance
-		Exception : die with error message if instance could not be extracted from command line
-		"""
-
-    def mark(self):
-	    """
-		Appends a mark to the agent log file. Generic to all agent.
-		Return : Undef
-		"""
+Use program create_new_playbook.sh to create a new playbook file tree:
+`Usage : ./create_new_playbook.sh <playbook_name>`
 
 
 
-from Agent import Agent
+## Agents
 
-class Lxc(Agent):
-    """
-	Specific LXC agent class
-	"""
+Currently supported agents are : Debian LXC, Vyos routers, FortiGate devices, FortiPoC.  
+A few agent-less functions are defined (for instance to wait or append some comments or *standard marks* in the logs)
 
-	def __init__(self, ip='', user='', password='', ssh_key_file=''):
+The generic syntax of each line of a testcase is as follow :  
+`__AGENT_NAME__:__AGENT_CONNECTION_ID__  __COMMAND__ __COMMAND_SPECIFIC_DATA__ `
 
-	    super(Lxc,self).__init__(type='lxc', ip=self.ip, user=self.user, password=self.password, ssh_key_file=self.ssh_key_file
+Each test/validation uses command 'check' followed by the test reference between square bracket [__TEST_NAME__].  
+The _TEST_NAME_ should be uniq in the testcase file.  
+A check may include a single or a list of *Requirements*. Requirements follow keyword 'has', they are provided as key=value pairs separated by spaces.
+A test pass if all provided requirements are met. If not requirement are provided, test would be succefull if an occurence was found.  
+
+Each line starting with comment sign '#' are ignored.  
+Lines are run sequentially.   
+
+SSH connections to agents are automatically opened and closed at the end of the testcase.  
+
+The following chapter defines each agent command syntax and support.  
 
 
-    def interpreter(self, dryrun=True):
-	    """
-        Analyse a line of command for a type LXC.
-		Determines the instances (call Agent.get_instance)
-		Determines the function to call and its parameters, call the action function (include dryrun=True|False) to each action
-		Returns True if the function to call could be identified from the command line
-		"""
+#### Generic commands
 
-	def open(self, instance=instance, protocol='tcp', port=''):
-	    """
-		Calls Agent.connect
-		Opens a new tcp connection in listen mode on given port using  lxc using nc -l port
-		"""
+Following commands are not agent specific and can be used with all agents
 
-	def connect(self, protocol='tcp', ip='', port=''):
-	    """
-		Calls Agent.connect
-		Opens a new tcp connection as a client to the provided ip and port
-		"""
+~~~
 
-	def send(self, data=''):
-	    """
-		Pre-requisite : session should have been opened (check with agent.is_connected(instance)
-		Sends data to an opened connection for both client side or server side
-		"""_
+# Append a message on the user output when running the testcase
+# This message is not append on the agent log file.
+message "set Branch 1 connections delays and losses"
 
-    def check_receive_since(self, data='', since=''):
-	    """
-        Checks data has been received on the instance looking for pattern 'data' in session trace file, starting from last seen 'since' marks
-        Returns True if confirmed received
-		"""
+# Appends a mark on the agent log file (but not on user output)
+# This should be used to delimit checks parsing start (see check command 'since')
+HOSTS-B2:1 mark "receive_ready"
+
+# Skip all following lines from the testcase
+skip all
+
+# Wait a number of seconds
+wait 30
+~~~
+
+
+#### Debian LXC
+
+Simple ping test.  
+Connection (UDP or TCP) one way or two-way test.  
+Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
+~~~
+# Ping test, pass if at least one packet is not lost
+# Delay and loss are added in the report
+LXC1-1:1 ping [con_test] 10.0.2.1
+
+# Ping test, pass if maximum packet loss under 50 %
+LXC1-1:1 ping [con_test] 10.0.2.1 maxloss 50
+
+# Open a tcp server on port 8000  on agent LXC-1 from its connection 1
+LXC-1:1 open tcp 8000
+
+# Append a mark in LXC-1:1 log file
+LXC-1:1 mark "server ready"
+
+# Connect to a tcp server at ip 10.0.2.1 on port 8000
+LXC-2:1 connect tcp 10.0.2.1 8000
+
+# Send data string 'alice' on tcp connection from client side
+LXC-2:1 data send "alice"
+
+# Check data 'alice' is received server. Test is called '1_traffic_origin_direction'
+# Parsing on server log file starts at mark "server ready"
+LXC-1:1 check [1_traffic_origin_direction] data receive "alice" since "server ready"
+												
+# Append a mark "client ready" on client log file
+LXC-2:1 mark "client ready"
+
+# Send data string 'bob' on tcp connection from server side:
+LXC-1:1 data send "bob"
+
+# Check data 'bob' is received on client. Test is called '2_traffic_reply_direction'
+# Search scope on client log file start at mark "client ready"
+LXC-2:1 check [2_traffic_reply_direction] data receive "bob" since "client ready"
+
+# Close tcp socket from client side:
+LXC-1:1 close tcp
+
+~~~
+
+
+#### Vyos
+
+Interact with vyos router. Does not generate tests results in reports.
+
+~~~
+# Change vyos device R1-B1 traffic-policy named 'WAN' settings 
+R1-B1:1 traffic-policy WAN delay 10 loss 0
+~~~
+
+#### FortiGate
+Interact with FortiGate device, generates test results and retrieve information added to the report.
+
+###### Status
+
+~~~
+# Check that FGT-B1 VM license is Valid
+FGT-B1-1:1 check [FGT-B1_license] status has license=True
+
+# Get FortiGate firmware version and VM license status
+# Added in the reports as respectively 'version' and 'license'
+FGT-B1-1:1 get status
+~~~
+
+
+###### Sessions
+
+Checks on FortiGate session table.
+This command has a first 'filter' section to select the sessions. An implicit 'diag sys session filter clear' is done before the command. Allowed keywords are :  
+['vd','sintf','dintf','src','nsrc','dst','proto','sport','nport','dport','policy','expire','duration','proto-state','session-state1','session-state2','ext-src','ext-dst','ext-src-negate','ext-dst-negate','negate']. Multiple selectors can be used if separated with space.  
+
+Supported requirements : 'state', 'src','dest','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total' (number of sessions)
+~~~
+# Checks that a least a session with destination port 9000 exists
+FGT-B1-1:1 check [session_tcp9000] session filter dport=9000
+
+# Checks that a least a session with dport 22 and dest ip 192.168.0.1 exists
+FGT-B1-1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.1
+
+# Checks that session with destination port 5000 has dirty flag set
+FGT-B1-1 check [session_is_dirty] session filter dport=5000 has flag=dirty
+~~~
+
+###### IPsec tunnel
+
+- Generic checks on IPsec based on `diagnose vpn ike status`
+- flush all ike gateway 
+
+~~~
+# Flush all ike gateways ('diagnose vpn ike gateway flush') 
+FGT-B1-1:1 flush ike gateway
+
+# Check number of established ike tunnels
+FGT-B1-1:1 check [B1_tunnels] ike status has ike_established=3
+
+# Check number of established IPsec tunnels (created and established)
+FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
+~~~
+
+
+###### BGP routes
+
+Checks on routing table BGP from `get router info routing-table bgp`
+
+~~~
+# number of bgp routes is 4 :
+FGT-B1-1 check [bgp_4_routes] bgp has total=4
+
+# bgp route for subnet 10.0.0.0/24 exist :
+FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
+
+# bgp nexthop 10.255.1.253 exist
+FGT-B1-1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
+
+# bgp has route toward interface vpn_mpls
+FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
+
+# multiple requirements can be combined
+FGT-B1-1 check [multi] bgp has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
+FGT-A:1 check [route_ok] routing table bgp 10.0.0.0/24 next-hop 1.1.1.1 interface port1
+~~~
+
+###### SD-WAN
+
+Various checks from `diagnose sys virtual-wan-link service __SERVICE__`
+
+~~~
+# check alive members :
+FGT-B1-1 check [sdwan_1_member1_alive] sdwan service 1 member 1 has state=alive
+
+# check sla value for a particular member (only available for sla type rule)
+FGT-B1-1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1
+
+# check that member seq 1 is the preferred member on service 1 (aka rule 1)
+FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
+~~~
+
+
+#### FortiPoC
+
+Interact with FortiPoC to bring ports up or down
+Using fpoc link up/down __device__ __port__
+
+~~~
+# Bring up link for FGT-B1-port1 switch side
+fpoc:1 link up FGT-B1-1 port1
+
+# Bring down link for FGT-B1-port1 switch side
+fpoc:1 link down FGT-B1-1 port1
+~~~
+
+
+## Debug
+When running, all debugs are stored in file debug.log
+Usefull message (for instance to track syntax error in testcases definition) should be with level WARNING or ERROR.
+Program is aborted for level ERROR.
+
+sample :
+~~~
+20200317:17:25:30,198 DEBUG   [playbook  .    get_agent_type      :  319] name=HOSTS-B2 type=lxc
+20200317:17:25:30,198 DEBUG   [playbook  .    _get_agent_from_tc_l:  347] Found corresponding type=lxc
+20200317:17:25:30,198 DEBUG   [playbook  .    run_testcase        :  199] agent_name=HOSTS-B2 agent_type=lxc agent_conn=1
+20200317:17:25:30,198 INFO    [playbook  .    _create_agent_conn  :  273] Enter with name=HOSTS-B2 type=lxc conn=1
+20200317:17:25:30,198 DEBUG   [playbook  .    _create_agent_conn  :  283] agent=HOSTS-B2 is already in our list
+20200317:17:25:30,198 DEBUG   [playbook  .    _create_agent_conn  :  303] Connection to HOSTS-B2:1 already exists
+20200317:17:25:30,198 DEBUG   [playbook  .    run_testcase        :  219] Agent already existing
+~~~
