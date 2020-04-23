@@ -5,8 +5,8 @@ message "Flushing IPsec tunnels on branch1 and branch2"
 FGT-B1-1:1 flush ike gateway
 FGT-B2-9:1 flush ike gateway
 
-message "Wait 30 sec for IPsec tunnels to come up with BGP peerings"
-wait 30 
+message "Wait 40 sec for IPsec tunnels to come up with BGP peerings"
+wait 40 
 
 message "Check B1 and B2 tunnels ok"
 FGT-B1-1:1 check [B1_tunnels] ike status has ike_established=3

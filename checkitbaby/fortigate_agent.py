@@ -163,6 +163,66 @@ class Fortigate_agent(Agent):
            log.error("Could not understand check command syntax")
            raise SystemExit
 
+
+    def _cmd_enter_vdom(self, vdom=""):
+        """
+        Enters in specified vdom
+        """
+        log.info("Enter with vdom={}".format(vdom))
+
+        self._connect_if_needed()
+        result = self._ssh.enter_vdom(vdom=vdom)
+
+        if not result:
+            log.error("Could not enter vdom {}".format(vdom))
+            raise SystemExit
+
+
+    def _cmd_enter_global(self):
+        """
+        Enters in global section
+        """
+        log.info("Enter")
+
+        self._connect_if_needed()
+        result = self._ssh.enter_global()
+
+        if not result:
+            log.error("Could not enter global section")
+            raise SystemExit
+
+    def _vdom_processing(self, line):
+        """
+        Do what is needed if query is specific for a vdom or global section
+        We are looking for pattern \svdom=VDOM\s to enter vdom
+        We are looking for \svdom=global\s to enter global section
+        the line is then returned without its vdom=XXXX keyword for further
+        processing
+        """
+        log.info("Enter with line={}".format(line))
+
+        # Match global
+        match_global = re.search("\svdom=global\s", line)
+        match_vdom =  re.search("\svdom=(?P<vd>\S+)\s", line)
+
+        found = False
+        if match_global:
+            self._cmd_enter_global()
+            found = True
+
+        elif match_vdom:
+            vd = match_vdom.group('vd')
+            self._cmd_enter_vdom(vdom=vd)
+            found = True
+
+        # remove vdom= from line id needed 
+        if found:
+            line = re.sub("vdom=\S+\s", '', line)
+            log.debug("stripped line={}".format(line))
+
+        return line
+
+
     def _cmd_check_ike(self, name="", line=""):
         """
         ike status:
@@ -175,6 +235,8 @@ class Fortigate_agent(Agent):
 
         found_flag = False
         self._connect_if_needed()
+
+
         result = self._ssh.get_ike_and_ipsec_sa_number()
         if result:
             found_flag = True
@@ -216,15 +278,18 @@ class Fortigate_agent(Agent):
         """
         Checks on bgp routing table (from get router info routing-table bgp)
         - number of bgp routes is 4 :
-          ex : FGT-B1-1 check [bgp_4_routes] bgp has total=4
+            ex : FGT-B1-1:1 check [bgp_4_routes] bgp has total=4
         - bgp route for subnet 10.0.0.0/24 exist :
-          ex : FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
+            ex : FGT-B1-1:1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
         - bgp nexthop 10.255.1.253 exist
-          ex : FGT-B1-1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
+            ex : FGT-B1-1:1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
         - bgp has route toward interface vpn_mpls
-          ex : FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
+            ex : FGT-B1-1:1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
         - multiple requirements can be combined 
-          ex ... has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
+            ... has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
+        - allows vdom= statement, should be positioned after bgp keyword
+            ex :  
+
         """
         log.info("Enter with name={} line={}".format(name, line))
         
@@ -330,9 +395,12 @@ class Fortigate_agent(Agent):
         """
         Checks on fortigate session :
         - session exist
-          ex : FGT-B1-1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.1
+          ex : FGT-B1-1:1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.1
         - session has flag 'dirty'
-          ex : FGT-B1-1 check [session_is_dirty] session filter dport=5000 has flag=dirty
+          ex : FGT-B1-1:1 check [session_is_dirty] session filter dport=5000 has flag=dirty
+
+        - allows vdom selection (should be positioned after keyword session
+          ex : F1B2:1 check [ssh_session] session vdom=customer filter dport=22
         """
         log.info("Enter with name={} line={}".format(name, line))
       
@@ -340,6 +408,10 @@ class Fortigate_agent(Agent):
  
         # Prepare session filter
         session_filter = {} 
+
+        # vdom processing if needed
+        line = self._vdom_processing(line=line)
+
         # remove requirements from line (after 'has ...')
         line_no_requirement = line
         line_no_requirement = line.split('has')[0]
@@ -470,6 +542,7 @@ class Fortigate_agent(Agent):
 
         fb = True  # by default, requirement is met
 
+
         if not 'subnet' in result:
             result['subnet'] = []
 
@@ -479,17 +552,27 @@ class Fortigate_agent(Agent):
         if not 'interface' in result:
             result['interface'] = []
 
-        if rname == 'total' :
-            log.debug("Checking exact number of subnets : asked={} got={}".format(rvalue, result['total']))
-            if str(result['total']) == str(rvalue):
-                log.debug("Total number of bgp routes is matching requirement")
-            else:
-                log.debug("Total number of bgp routes does not match requirement")
-                fb = False
-                  
-        elif rname in ('subnet','nexthop','interface'):
+        if rname in ('total', 'recursive', 'subnet','nexthop','interface'):
+
             log.debug("requirement {}={} is known".format(rname, rvalue))
-            if result[rname].count(rvalue) > 0:
+
+            if rname == 'total' :
+                log.debug("Checking exact number of subnets : asked={} got={}".format(rvalue, result['total']))
+                if str(result['total']) == str(rvalue):
+                    log.debug("Total number of bgp routes is matching requirement")
+                else:
+                    log.debug("Total number of bgp routes does not match requirement")
+                    fb = False
+
+            elif rname == 'recursive' :
+                log.debug("Checking exact number of recursive routes specifically : asked={} got={}".format(rvalue, result['recursive']))
+                if str(result['recursive']) == str(rvalue):
+                    log.debug("Total number of bgp recursive routes is matching requirement")
+                else:
+                    log.debug("Total number of bgp recursive routes does not match requirement")
+                    fb = False
+
+            elif result[rname].count(rvalue) > 0:
                 log.debug("rname={} found : requirement is met".format(rname))
                 fb = True
             else :
@@ -497,8 +580,8 @@ class Fortigate_agent(Agent):
                 fb = False
             
         else:
-            log.debug("unknown bgp requirement {}={} is unknown".format(rname, rvalue))
-            raise SystemExit
+           log.error("unknown bgp requirement {}={} is unknown".format(rname, rvalue))
+           raise SystemExit
 
         log.debug("requirements verdict : {}".format(fb))
         return fb
@@ -526,15 +609,21 @@ class Fortigate_agent(Agent):
 			FGT-B1-1 #
 
             - check alive members :
-               ex : FGT-B1-1 check [sdwan_1_member1_alive] sdwan service 1 member 1 has state=alive
+                ex : FGT-B1-1:1 check [sdwan_1_member1_alive] sdwan service 1 member 1 has status=alive
             - check sla value for a particular member
-               ex : FGT-B1-1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1 
+                ex : FGT-B1-1:1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1 
             - check preferred member 
-              ex :  FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1  
+                ex : FGT-B1-1:1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1  
+            - vdom supported : 
+                ex : F1B2:1 check [sdwan_1_member1_alive] sdwan vdom=customer service 1 member 1 has status=alive
 	    """
 
         log.info("Enter with name={} line={}".format(name, line))
 
+        # vdom processing if needed
+        line = self._vdom_processing(line=line)
+
+        # remove requirements from line (after 'has ...')
         line_no_requirement = line
         line_no_requirement = line.split('has')[0]
         log.debug("line_no_requirement={}".format(line_no_requirement))

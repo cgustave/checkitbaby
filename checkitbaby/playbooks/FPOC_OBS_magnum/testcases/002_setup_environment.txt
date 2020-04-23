@@ -1,0 +1,105 @@
+### Reset all Vyos routers to base settings
+
+# Uncomment to skip further lines
+# skip all
+
+# R1B router
+message "set R-1B router delays and losses"
+R1B:1 traffic-policy R1BB1ISP1 delay 30 loss 0
+R1B:1 traffic-policy R1BB1ISP2 delay 30 loss 0
+R1B:1 traffic-policy R1BB2ISP1 delay 30 loss 0
+R1B:1 traffic-policy R1BB2ISP2 delay 30 loss 0
+R1B:1 traffic-policy R1BH1ISP1 delay 5 loss 0
+R1B:1 traffic-policy R1BH1ISP2 delay 5 loss 0
+R1B:1 traffic-policy R1BH2ISP1 delay 5 loss 0
+R1B:1 traffic-policy R1BH2ISP2 delay 5 loss 0
+
+# R2B router
+message "set R-2B router delays and losses"
+R2B:1 traffic-policy R2BB1ISP1 delay 30 loss 0
+R2B:1 traffic-policy R2BB1ISP2 delay 30 loss 0
+R2B:1 traffic-policy R2BB2ISP1 delay 30 loss 0
+R2B:1 traffic-policy R2BB2ISP2 delay 30 loss 0
+R2B:1 traffic-policy R2BH1ISP1 delay 5 loss 0
+R2B:1 traffic-policy R2BH1ISP2 delay 5 loss 0
+R2B:1 traffic-policy R2BH2ISP1 delay 5 loss 0
+R2B:1 traffic-policy R2BH2ISP2 delay 5 loss 0
+
+# R-MPLS router
+message "set R-MPLS router delays and losses"
+RMPLS:1 traffic-policy RM1B1 delay 5 loss 0
+RMPLS:1 traffic-policy RM1B2 delay 5 loss 0
+RMPLS:1 traffic-policy RM1H1 delay 5 loss 0
+RMPLS:1 traffic-policy RM1H2 delay 5 loss 0
+RMPLS:1 traffic-policy RM2B1 delay 5 loss 0
+RMPLS:1 traffic-policy RM2B2 delay 5 loss 0
+RMPLS:1 traffic-policy RM2H1 delay 5 loss 0
+RMPLS:1 traffic-policy RM2H2 delay 5 loss 0
+
+# R-INTERNET router
+message "set R-INTERNET router delays and losses"
+RINT:1 traffic-policy ZSCNOM delay 10 loss 0
+RINT:1 traffic-policy ZSCBACK delay 15 loss 0
+
+### Link up all FPOC links
+
+# Zone 1 Branch 1
+message "link up FGT-1B1-1 ports"
+fpoc:1 link up FGT-1B1-1 port1
+fpoc:1 link up FGT-1B1-1 port2
+fpoc:1 link up FGT-1B1-1 port4
+fpoc:1 link up FGT-1B1-1 port5
+
+# Zone 1 Branch 2
+message "link up FGT-1B2-9 ports"
+fpoc:1 link up FGT-1B2-9 port1
+fpoc:1 link up FGT-1B2-9 port2
+fpoc:1 link up FGT-1B2-9 port4
+fpoc:1 link up FGT-1B2-9 port5
+
+# Zone 1 Hub1
+message "link up FGT-1H1-253 ports"
+fpoc:1 link up FGT-1H1-253 port1
+fpoc:1 link up FGT-1H1-253 port2
+fpoc:1 link up FGT-1H1-253 port4
+fpoc:1 link up FGT-1H1-253 port9
+
+# Zone 1 Hub1
+message "link up FGT-1H2-237 ports"
+fpoc:1 link up FGT-1H2-237 port1
+fpoc:1 link up FGT-1H2-237 port2
+fpoc:1 link up FGT-1H2-237 port4
+fpoc:1 link up FGT-1H2-257 port9
+
+# Zone 2 Branch 1
+message "link up FGT-2B1-17 ports"
+fpoc:1 link up FGT-2B1-17 port1
+fpoc:1 link up FGT-2B1-17 port2
+fpoc:1 link up FGT-2B1-17 port4
+fpoc:1 link up FGT-2B1-17 port5
+
+# Zone 2 Branch 2
+message "link up FGT-2B2-25 ports"
+fpoc:1 link up FGT-2B2-25 port1
+fpoc:1 link up FGT-2B2-25 port2
+fpoc:1 link up FGT-2B2-25 port4
+fpoc:1 link up FGT-2B2-25 port5
+
+# Zone 2 Hub1
+message "link up FGT-2H1-245 ports"
+fpoc:1 link up FGT-2H1-245 port1
+fpoc:1 link up FGT-2H1-245 port2
+fpoc:1 link up FGT-2H1-245 port4
+fpoc:1 link up FGT-2H1-245 port9
+
+# Zone 2 Hub1
+message "link up FGT-2H2-229 ports"
+fpoc:1 link up FGT-2H2-229 port1
+fpoc:1 link up FGT-2H2-229 port2
+fpoc:1 link up FGT-2H2-229 port4
+fpoc:1 link up FGT-2H2-229 port9
+
+# Multi purpose fortigate
+fpoc:1 link up FGT-UNI port1
+fpoc:1 link up FGT-UNI port2
+

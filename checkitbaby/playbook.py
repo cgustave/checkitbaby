@@ -422,7 +422,7 @@ class Playbook(object):
         F.close() 
 
         if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
-            print ("warning : file variables.json does not exists ({})\n".format(file_agents))
+            print ("warning : file variables.json does not exists ({})\n".format(file_variables))
         else :
             log.debug("Loading variables")
             with open(file_variables, encoding='utf-8') as V:
