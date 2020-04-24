@@ -1,0 +1,32 @@
+# Macro for connectivity check, one-way
+# Uses a double-translation ($$server$$) so H1B2 need to be declared as a variables
+
+# example of call : &tcp_connectivity_check(H1B1,1,H1B2,1,9000)
+
+# Definition :
+macro tcp_connectivity_check(client,client_conn,server,server_conn,port):
+
+# create a random message
+set server_ready = random_string(8)
+set message = random_string(8)
+set test_id = random_string(4)
+
+# Open server on the given port
+$server$:$server_conn$ open tcp $port$
+mark "$server_ready$"
+
+# Client connects
+$client$:$client_conn$ connect tcp $$server$$ 9000
+
+# Client send data on forward direction
+$client$:$client_conn$  send "$message$"
+
+# Server checks message is received
+$server$:$server_conn$ check [tcp_forward_$test_id$] "$message$" since "$server_ready$"
+
+# Closing
+$client$:$client_conn$ close
+$server$:$server_conn$ close
+end
+
+

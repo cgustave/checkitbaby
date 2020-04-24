@@ -31,19 +31,60 @@ class Playbook(object):
       ex : /fortipoc/playbooks/advpn/conf/agents.json
 
     Variables : 
-    (future implementation) list of variables defined in a json format which
+    List of variables defined in a json format which
     could be used withing testcases scenario (called with $name) :
       ex : { 'var1' : 'port1', 'var2' : 'internal' }}
+    Variables can be used in scenario files, between $ like : $myvar$ 
 
-    Flows :
-    (future implementation) list of flows defined with protocol, src_ip,
-    dst_ip, dest_port. Flows could be referenced in the scenario :
-       ex :  { 'flow1' : { 'sip' : '10.0.1.1', 'dip' : '10.0.2.1', 'dport' : '80' }`}
+    Variables can also be  assigned within the scenario using statement 'set'.
+    In this case, pre-defined functions can be used for assignment :
+   
+    - random_string(length) : random string generation 
+      ex : set message = random_string(4)
 
     Macros :
-    (future implementation) defines a block of scenario statements which can be
+    Defines a block of scenario statements which can be
     called with some arguments and referenced in testcase to factories
-    statements: to be determined...
+    statements. Macros are defined in file conf/macro.txt with statement
+    'macro' with parameters, ending with statement 'end'. It is possible to
+    define variables within macro (statique or dynamique), it is also possible
+    to define variables translated into another variables using double
+    $$variable$$ (see below). Example of conf/macro.txt :
+    Note : in this example H1B2 (server agent) is also defined as variables,
+           this allows statement : $$server$$ which triggers a double translation :
+              1) $$server$$ -> $H1B2$   (translation from macro parameters)
+              2) $H1B2$ -> 10.1.2.1     (translation from variables.json)
+
+        # Macro for connectivity check, one-way
+        # Uses a double-translation ($$server$$) so H1B2 need to be declared as a variables
+
+        # example of call : &tcp_connectivity_check(H1B1,1,H1B2,1,9000)
+
+        # Definition :
+		macro tcp_connectivity_check(client,client_conn,server,server_conn,port):
+
+		# create a random message
+		set server_ready = random_string(8)
+		set message = random_string(8)
+		set test_id = random_string(4)
+
+		# Open server on the given port
+		$server$:$server_conn$ open tcp $port$
+		mark "$server_ready$"
+
+		# Client connects
+		$client$:$client_conn$ connect tcp $$server$$ 9000
+
+		# Client send data on forward direction
+		$client$:$client_conn$  send "$message$"
+
+		# Server checks message is received
+		$server$:$server_conn$ check [tcp_forward_$test_id$] "$message$" since "$server_ready$"
+
+        # Closing
+        $client$:$client_conn$ close
+        $server$:$server_conn$ close
+		end
 
     Runs : 
     A 'run' is a directory containing all traces from the last running playbook
@@ -95,7 +136,6 @@ class Playbook(object):
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
-        self.variables = {}           # Variables definitions
         self.dryrun = dryrun          # Used for scenario syntax verification only (no connection to agent)
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
@@ -130,7 +170,7 @@ class Playbook(object):
         self.nb_testcases = nb
         log.debug("Number of registered testcases={}".format(self.nb_testcases))
         self._register_used_agents()
-        self._load_agents_and_variables()
+        self._load_agents()
 
     def get_agents(self):
         """
@@ -237,9 +277,6 @@ class Playbook(object):
 
             # Tell agent who it is and for which testcase it has been created 
             self.agents_connections[agent_name][agent_conn].agent = self.agents[agent_name]
-
-            # Provide variables to agent
-            self.agents_connections[agent_name][agent_conn].variables = self.variables
 
             # Provide report for update
             self.agents_connections[agent_name][agent_conn].report = self.report 
@@ -395,17 +432,15 @@ class Playbook(object):
                     log.debug("Playbook new agent={}".format(agent))
                     self.testcases_agents.append(agent)
 
-    def _load_agents_and_variables(self):
+    def _load_agents(self):
         """
         Requirements : an agent file should exists
-        variable files are optional
         Load all agents with their details from json file
         """
         log.info("Enter")
 
         dir = self.path+"/"+self.name+"/conf"
         file_agents = self.path+"/"+self.name+"/conf/agents.json"
-        file_variables = self.path+"/"+self.name+"/conf/variables.json"
         
         # checks agent conf dir and json file exists
         if not (os.path.exists(dir) and os.path.isdir(dir)):
@@ -420,14 +455,6 @@ class Playbook(object):
         with open(file_agents, encoding='utf-8') as F:
             self.agents = json.loads(F.read())
         F.close() 
-
-        if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
-            print ("warning : file variables.json does not exists ({})\n".format(file_variables))
-        else :
-            log.debug("Loading variables")
-            with open(file_variables, encoding='utf-8') as V:
-                self.variables = json.loads(V.read())
-            V.close() 
 
     def _create_testcase_run_file_structure(self, testcase_id=None):
         """

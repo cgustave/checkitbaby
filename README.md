@@ -6,9 +6,10 @@ Checkitbaby is a tool to allow automatic tests validations in a lab.
 It uses 'agents' to interact with the setup for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
 
 *Playbooks* are defined as a collection of *Testcases*, each testcase is a simple text file where each lines defines an action applied to an *Agent*.
-Each line of the testcase can either trigger an action or get some information and see if some requirements are met (checks).  
+Each line of the testcase can either trigger an action and/or get some information and see if some requirements are met (checks).  
 Test scenario syntax is simple and evolutive, commands are defined keywords and depend on the type of agents targeted.  
-Multiple simultaneous connections to agents are supported.  *Variables* are allowed  in testcase. A variable is just a keyword starting with a dollar sign '$' and defined in a variable file. 
+Multiple simultaneous connections to agents are supported. 
+*Variables* are allowed  in testcase. A variable is just a keyword starting with a dollar sign '$' and defined in a variable file. 
 During testcases execution, all *Run* information such as agent ouputs are collected in log files. The test verification would always be done from log file parsing like a human would do. With this, it is possible to easily double-check the test result post-run.  *Marks* can be used as a delimeter for check verification within the agent log file.  
 
 When all the testcases from a Playbook has run, a *Report* in a json format is delivered. The report is organized by testcases and include all checks results from the testcase.
@@ -23,6 +24,22 @@ Checkitbaby focus is to run against FortiPoc setup, either from withing the PoC 
 
 Will be deliver as python package (to be done)
 * Requirements : netcontrol python library: `pip install -I netcontrol`
+
+
+## Usage
+
+##### Command line:
+
+* Running all testcases from a playbook :  
+  ex : 	`python3 run_playbook.py myPlaybook`
+
+* Running a specific testcase from a playbook
+	`python3 run_playbook.py myPlaybook 003`
+
+##### Web integration:
+
+Planned.
+The idea is to load, select and run the defined testcases and provide a formated report.
 
 
 ## Organization

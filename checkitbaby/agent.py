@@ -34,8 +34,6 @@ class Agent(object):
         """
         log.info("Enter with line={}".format(line))
 
-        original_line = line
-
         # Sanity checks
         if self.path == None:
             log.error("Undefined path")
@@ -61,27 +59,6 @@ class Agent(object):
 
         if command == "mark":
             self.process_mark(line=line)
-
-        # variables translation
-        log.debug("See if variables need to be translated")
-        nb = 0
-        for word in line.split():
-            match_variable = re.search("\$(?P<variable>\S+)", word)
-            if match_variable:
-                variable = match_variable.group('variable')
-                log.debug("Found variable={} in world={}, translating".format(variable, word))
-
-                # check variable is defined
-                if variable in self.variables:
-                    log.debug("Variable={} has been found, converting to {}".format(variable, self.variables[variable]))
-                    word_to_replace = "\$"+str(variable)
-                    translated_line = re.sub(word_to_replace, self.variables[variable], line)
-                    line = translated_line
-                    nb = nb + 1
-                    log.debug("Line translated to line={} iteration={}".format(line, nb))
-                else:
-                    log.error("Variable {} is not defined. agent={} connection={} line={} Aborting test".format(variable, self.name, self.conn, original_line))
-                    raise SystemExit
 
         # returning translated line
         return line
@@ -126,8 +103,6 @@ class Agent(object):
              filename should be './playbooks/myPlaybook/runs/1/testcases/2/lxc-1_3.log
 
         * type='report' : returns path and filename for a report in testcase
-
-        * type='variables' : returns path and filename for variable json
         """
         log.info("Enter with type={}".format(type))
             

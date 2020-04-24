@@ -1,0 +1,13 @@
+
+
+marco one-way-tcp (client,server,port):
+
+    set message = random_char(6)
+
+    $server open tcp $port
+    $server mark "$message"
+	$client connect tcp 
+
+
+end
+

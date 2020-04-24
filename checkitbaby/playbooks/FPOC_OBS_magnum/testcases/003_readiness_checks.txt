@@ -4,7 +4,4 @@ message "Readiness checks on F1B1"
 F1B2:1 check [ssh_session_exists] session vdom=customer filter dport=22 
 F1B2:1 check [bgp_routes] bgp vdom=customer has total=12 recursive=8 subnet=10.1.1.0/24 subnet=10.2.1.0/24 subnet=10.2.2.0/24 interface=sgwn_mpls1 interface=sgwn_inet1 interface=sgwn_inet2
 F1B2:1 check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive
-
-
-
-
+F1B2:1 close
