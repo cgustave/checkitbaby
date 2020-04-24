@@ -245,6 +245,7 @@ class Testcase(object):
             log.debug("line after macro expansion = {}".format(line))
             self.lines.append(line)
 
+
     def expand_variables(self):
         """
         Variables can be used in scenario.
@@ -257,8 +258,10 @@ class Testcase(object):
         """
         log.info("Enter")
 
+        line_index = 0
         for line in self.lines:
-
+            
+            found = False
             original_line = line
             
             # See if a variable assignment is needed
@@ -266,6 +269,7 @@ class Testcase(object):
             if match_assignment:
                 var = match_assignment.group('var')
                 assignment = match_assignment.group('assignment')
+                found = True
                 log.debug("Variable assignment required : var={} assignment={}".format(var,assignment))
 
                 # Deal with special functions
@@ -290,6 +294,7 @@ class Testcase(object):
 
                     # check variable is defined
                     if variable in self.variables:
+                        found = True
                         log.debug("Variable={} has been found, converting to {}".
                                   format(variable, self.variables[variable]))
                         word_to_replace = "\$"+str(variable)+"\$"
@@ -301,6 +306,13 @@ class Testcase(object):
                         log.error("Variable {} is not defined in line={}. Aborting test".
                                   format(variable, original_line))
                         raise SystemExit
+
+            if found:
+                log.debug("Translation done, replacing original line at line_index={}".format(line_index))
+                self.lines[line_index] = line
+       
+            # Increase line index by 1 
+            line_index = line_index + 1
 
  
     def disable(self):

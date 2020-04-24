@@ -232,7 +232,7 @@ class Playbook(object):
         self._create_testcase_run_file_structure(testcase_id=testcase.id)
 
         for line in testcase.lines:
-            log.debug("line={}".format(line))
+            log.debug("testcase line={}".format(line))
 
             # Get agent name, type and connection_id
             (agent_name, agent_type, agent_conn) = self._get_agent_from_tc_line(id=testcase.id, line=line)
@@ -373,6 +373,8 @@ class Playbook(object):
         match_skip_all = re.search("(\s|\t)*(?:skip all)",line)
         # Identify the 'wait' command
         match_wait = re.search("(\s|\t)*(?:wait)",line)
+        # Identify 'set' variable assignment
+        match_set = re.search("^set",line)
 
         if match:
             agent_name = match.group('agent')
@@ -401,6 +403,12 @@ class Playbook(object):
             log.debug("wait request")
             agent_type = "generic"
             agent_name = "wait"
+            agent_conn = "0"
+
+        elif match_set:
+            log.debug("set command")
+            agent_type = "generic"
+            agent_name = "continue"
             agent_conn = "0"
 
         else:

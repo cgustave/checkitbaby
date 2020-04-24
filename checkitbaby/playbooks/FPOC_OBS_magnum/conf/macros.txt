@@ -13,16 +13,57 @@ set test_id = random_string(4)
 
 # Open server on the given port
 $server$:$server_conn$ open tcp $port$
-mark "$server_ready$"
+$server$:$server_conn$ mark "$server_ready$"
 
 # Client connects
 $client$:$client_conn$ connect tcp $$server$$ 9000
 
 # Client send data on forward direction
-$client$:$client_conn$  send "$message$"
+$client$:$client_conn$ send "$message$"
 
 # Server checks message is received
 $server$:$server_conn$ check [tcp_forward_$test_id$] "$message$" since "$server_ready$"
+
+# Closing
+$client$:$client_conn$ close
+$server$:$server_conn$ close
+end
+
+# ---
+
+# Macro for connectivity check, two-way
+# uses a double-translation for client and server that need to be defined
+
+# example of call : &tcp_connection_twoway_check(
+macro tcp_connectivity_twoway_check(client,client_conn,server,server_conn,port):
+
+# create a random message
+set server_ready = random_string(8)
+set client_ready = random_string(8)
+set message1 = random_string(8)
+set message2 = random_string(8)
+set test_id = random_string(4)
+
+# Open server on the given port
+$server$:$server_conn$ open tcp $port$
+$server$:$server_conn$ mark "$server_ready$"
+
+# Client connects
+$client$:$client_conn$ connect tcp $$server$$ 9000
+
+# Client send data on forward direction
+$client$:$client_conn$ send "$message1$"
+$client$:$client_conn$ mark "$client_ready$"
+
+# Server checks message1 is received
+$server$:$server_conn$ check [tcp_forward_$test_id$] "$message1$" since "$server_ready$"
+
+# Server send data on reply direction
+$server$:$server_conn$ send "$message2$"
+
+# Client checks message2 is received
+$client$:$client_conn$ check [tcp_reply_$test_id$] "$message2$" since "$client_ready$"
+
 
 # Closing
 $client$:$client_conn$ close

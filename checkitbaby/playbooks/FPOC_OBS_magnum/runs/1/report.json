@@ -1,12 +1,10 @@
 {
-    "result": false,
+    "result": true,
     "testcases": {
-        "003": {
-            "result": false,
+        "100": {
+            "result": true,
             "check": {
-                "ssh_session_exists": true,
-                "bgp_routes": false,
-                "sdwan_service": true
+                "tcp_forward_XT9V": true
             },
             "get": {}
         }
