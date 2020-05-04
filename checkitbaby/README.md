@@ -81,6 +81,6 @@ CLASSES
      |      list of weak references to the object (if defined)
 
 FILE
-    /home/cgustave/github/python/checkitbaby/checkitbaby/checkitbaby.py
+    /home/cgustave/github/python/packages/checkitbaby/checkitbaby/checkitbaby.py
 
 

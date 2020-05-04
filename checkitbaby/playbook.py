@@ -130,6 +130,8 @@ class Playbook(object):
         self.name = name
         self.path = path
         self.run = run                # Run id
+        self.macros = {}              
+        self.variables = {}           
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
         self.nb_testcases = 0  
@@ -139,6 +141,82 @@ class Playbook(object):
         self.dryrun = dryrun          # Used for scenario syntax verification only (no connection to agent)
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
+
+
+    def load_variables(self):
+        """
+        Load the variables json file
+        """
+        log.info("Enter")
+
+        dir = self.path+"/"+self.name+"/conf"
+        file_variables = self.path+"/"+self.name+"/conf/variables.json"
+        
+        # checks conf dir and json file exists
+        if not (os.path.exists(dir) and os.path.isdir(dir)):
+            print ("conf dir {} does not exist or is not a directory\n".format(dir))
+            raise SystemExit
+
+        if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
+            print ("warning : file variables.json does not exists ({})\n".format(file_variables))
+        else :
+            log.debug("Loading variables")
+            with open(file_variables, encoding='utf-8') as V:
+                self.variables = json.loads(V.read())
+            V.close() 
+
+    def load_macros(self):
+        """
+        Load the macros in memory
+        """
+        log.info("Enter")
+        filename = self.path+"/"+self.name+"/conf/macros.txt"
+        in_macro = False
+
+        try:
+            with open(filename) as file_in:
+                for line in file_in:
+                    line = line.strip()
+                    ignore_line = False
+
+                    if line == "":
+                        continue
+                    if (line[0] == "#"):
+                        continue
+                    log.debug("read line={}".format(line))
+                    
+                    match_macro_prototype = re.search("^(?:macro\s+)(?P<name>[A-Za-z0-9\-_]+)(?:\s*)\((?P<params>\S+)\)\:",line)
+                    if match_macro_prototype and not in_macro:
+                        in_macro = True
+                        ignore_line = True
+                        name = match_macro_prototype.group('name')
+                        params = match_macro_prototype.group('params')
+                        log.debug("Matched macro prototype register macro name={} params={}".format(name, params))
+
+                        # register macro
+                        self.macros[name] = {}
+                        self.macros[name]['lines'] = []
+
+                        # register params, sorted in a list
+                        self.macros[name]['params'] = []
+                        for p in params.split(','):
+                            log.debug("Params={}".format(p))
+                            self.macros[name]['params'].append(p)
+
+                    match_macro_end = re.search("^end",line)
+                    if match_macro_end and in_macro:
+                        in_macro = False
+                        ignore_line = True
+                        log.debug("Matched end of macro")
+
+                    # Expands macro lines but ignore proto line and end
+                    if in_macro and not ignore_line:
+                        log.debug("Add line in macro line={}".format(line))
+                        self.macros[name]['lines'].append(line)
+
+        except IOError as e:
+            log.warning("I/O error filename={} error={}".format(filename,e.strerror))
+
 
     def register(self):
         """
@@ -151,6 +229,10 @@ class Playbook(object):
         Load the agents definitions
         """
         log.info("Enter")
+
+        self.load_variables()
+        self.load_macros()
+
         nb = 0
         for filename in sorted(os.listdir(self.path+"/"+self.name+"/testcases")):
             nb=nb+1
@@ -422,7 +504,9 @@ class Playbook(object):
         """
         log.info("Enter with id={} name={} filename={}".format(id,name,filename))
 
-        tc = Testcase(id=id, name=name, playbook=self.name, path=self.path, filename=filename)
+        tc = Testcase(id=id, name=name, playbook=self.name, path=self.path,
+                      filename=filename, macros=self.macros,
+                      variables=self.variables)
         self.testcases.append(tc)
 
     def _register_used_agents(self):
@@ -493,7 +577,11 @@ class Playbook(object):
         
         path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
         p = Path(path)
-        p.mkdir(parents=True, exist_ok=True)
+        try:
+            p.mkdir(parents=True)
+        except:
+            log.warning("path already created")
+
         log.debug("Create if needed path={}".format(path))
 
         old_run_logs = path+"/*.log"

@@ -1,6 +1,7 @@
 #!/bin/bash
-export PYTHONPATH=${PYTHONPATH}:~/github/python/netcontrol:./tests
 NAME=checkitbaby
+
+PYTHONPATH=$PYTHONPATH:/home/cgustave/github/python/packages/checkitbaby/venv/lib/python3.7/site-packages
 
 echo "***" > debug.log
 echo "" >> debug.log

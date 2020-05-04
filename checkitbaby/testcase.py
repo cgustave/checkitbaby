@@ -22,9 +22,11 @@ class Testcase(object):
       ex : /fortipoc/playbooks/advpn/testcases/002_connectivity.txt
       ex : /fortipoc/playbooks/advpn/testcases/003_ipsec_tunnels.txt
       ex : /fortipoc/playbooks/advpn/testcases/004_routing.txt
+
+    requires : variables, macros, playbook, path, name, id
     """
 
-    def __init__(self, id='', name='', playbook='', path='', filename='', debug=False):
+    def __init__(self, id='', name='', playbook='', path='', filename='', variables='', macros='',  debug=False):
 
         # create logger
         log.basicConfig(
@@ -53,90 +55,14 @@ class Testcase(object):
 
         self.lines = []      
         self.state = True
-        self.agents = []       # list of agents used in the scenario
-        self.macros = {}       # macro definitions, dictionnay with macro name as key
-        self.variables = {}    # variables defined for the playbook
+        self.agents = []            # list of agents used in the scenario
+        self.macros = macros        # macro definitions, dictionnay with macro name as key
+        self.variables = variables  # variables defined for the playbook
 
         # Run
-        self.load_variables()
-        self.load_macros()
         self.load_scenario()
         self.expand_variables()
         self.build_agents_list()
-
-    def load_macros(self):
-        """
-        Load the macros in memory
-        """
-        log.info("Enter")
-        filename = self.path+"/"+self.playbook+"/conf/macros.txt"
-        in_macro = False
-
-        try:
-            with open(filename) as file_in:
-                for line in file_in:
-                    line = line.strip()
-                    ignore_line = False
-
-                    if line == "":
-                        continue
-                    if (line[0] == "#"):
-                        continue
-                    log.debug("read line={}".format(line))
-                    
-                    match_macro_prototype = re.search("^(?:macro\s+)(?P<name>[A-Za-z0-9\-_]+)(?:\s*)\((?P<params>\S+)\)\:",line)
-                    if match_macro_prototype and not in_macro:
-                        in_macro = True
-                        ignore_line = True
-                        name = match_macro_prototype.group('name')
-                        params = match_macro_prototype.group('params')
-                        log.debug("Matched macro prototype register macro name={} params={}".format(name, params))
-
-                        # register macro
-                        self.macros[name] = {}
-                        self.macros[name]['lines'] = []
-
-                        # register params, sorted in a list
-                        self.macros[name]['params'] = []
-                        for p in params.split(','):
-                            log.debug("Params={}".format(p))
-                            self.macros[name]['params'].append(p)
-
-                    match_macro_end = re.search("^end",line)
-                    if match_macro_end and in_macro:
-                        in_macro = False
-                        ignore_line = True
-                        log.debug("Matched end of macro")
-
-                    # Expands macro lines but ignore proto line and end
-                    if in_macro and not ignore_line:
-                        log.debug("Add line in macro line={}".format(line))
-                        self.macros[name]['lines'].append(line)
-
-        except IOError as e:
-            log.warning("I/O error filename={} error={}".format(filename,e.strerror))
-
-    def load_variables(self):
-        """
-        Load the variables json file
-        """
-        log.info("Enter")
-
-        dir = self.path+"/"+self.playbook+"/conf"
-        file_variables = self.path+"/"+self.playbook+"/conf/variables.json"
-        
-        # checks conf dir and json file exists
-        if not (os.path.exists(dir) and os.path.isdir(dir)):
-            print ("conf dir {} does not exist or is not a directory\n".format(dir))
-            raise SystemExit
-
-        if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
-            print ("warning : file variables.json does not exists ({})\n".format(file_variables))
-        else :
-            log.debug("Loading variables")
-            with open(file_variables, encoding='utf-8') as V:
-                self.variables = json.loads(V.read())
-            V.close() 
 
     def load_scenario(self):
         """
