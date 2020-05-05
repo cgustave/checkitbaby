@@ -108,7 +108,18 @@ class Checkitbaby(object):
         Returns True in no exception is caught
         """
         log.info("Enter with run={} id={}".format(run, id))
+        self.playbook.run = run
         self.playbook.run_testcases(id=id)
+  
+    def run_playlist(self, run, id):
+        """
+        Runs a playlist specified by its id
+        Playlist should be defined in conf/playlists.conf 
+        and should reference existing testcases
+        """
+        log.info("Enter with run={} id={}".format(run, id))
+        self.playbook.run = run
+        self.playbook.run_playlist(id=id)
 
     def run_report(self, run='1'):
         """

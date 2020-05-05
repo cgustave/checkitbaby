@@ -1,11 +1,19 @@
 {
     "result": true,
     "testcases": {
+        "010": {
+            "result": true,
+            "check": {
+                "origin": true,
+                "reply": true
+            },
+            "get": {}
+        },
         "011": {
             "result": true,
             "check": {
-                "tcp_forward_JB6E": true,
-                "tcp_reply_JB6E": true
+                "tcp_forward_T69I": true,
+                "tcp_reply_T69I": true
             },
             "get": {}
         }

@@ -132,8 +132,10 @@ class Playbook(object):
         self.run = run                # Run id
         self.macros = {}              
         self.variables = {}           
+        self.playlists = {}           # Dictionary of our playlists (from conf/)
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
+        self.testcases_list = []      # List of registeres testcase id
         self.nb_testcases = 0  
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
@@ -143,84 +145,9 @@ class Playbook(object):
         self.report_summary = True    # Overall report summary, to be updated after each testcase
 
 
-    def load_variables(self):
-        """
-        Load the variables json file
-        """
-        log.info("Enter")
-
-        dir = self.path+"/"+self.name+"/conf"
-        file_variables = self.path+"/"+self.name+"/conf/variables.json"
-        
-        # checks conf dir and json file exists
-        if not (os.path.exists(dir) and os.path.isdir(dir)):
-            print ("conf dir {} does not exist or is not a directory\n".format(dir))
-            raise SystemExit
-
-        if not (os.path.exists(file_variables) and os.path.isfile(file_variables)):
-            print ("warning : file variables.json does not exists ({})\n".format(file_variables))
-        else :
-            log.debug("Loading variables")
-            with open(file_variables, encoding='utf-8') as V:
-                self.variables = json.loads(V.read())
-            V.close() 
-
-    def load_macros(self):
-        """
-        Load the macros in memory
-        """
-        log.info("Enter")
-        filename = self.path+"/"+self.name+"/conf/macros.txt"
-        in_macro = False
-
-        try:
-            with open(filename) as file_in:
-                for line in file_in:
-                    line = line.strip()
-                    ignore_line = False
-
-                    if line == "":
-                        continue
-                    if (line[0] == "#"):
-                        continue
-                    log.debug("read line={}".format(line))
-                    
-                    match_macro_prototype = re.search("^(?:macro\s+)(?P<name>[A-Za-z0-9\-_]+)(?:\s*)\((?P<params>\S+)\)\:",line)
-                    if match_macro_prototype and not in_macro:
-                        in_macro = True
-                        ignore_line = True
-                        name = match_macro_prototype.group('name')
-                        params = match_macro_prototype.group('params')
-                        log.debug("Matched macro prototype register macro name={} params={}".format(name, params))
-
-                        # register macro
-                        self.macros[name] = {}
-                        self.macros[name]['lines'] = []
-
-                        # register params, sorted in a list
-                        self.macros[name]['params'] = []
-                        for p in params.split(','):
-                            log.debug("Params={}".format(p))
-                            self.macros[name]['params'].append(p)
-
-                    match_macro_end = re.search("^end",line)
-                    if match_macro_end and in_macro:
-                        in_macro = False
-                        ignore_line = True
-                        log.debug("Matched end of macro")
-
-                    # Expands macro lines but ignore proto line and end
-                    if in_macro and not ignore_line:
-                        log.debug("Add line in macro line={}".format(line))
-                        self.macros[name]['lines'].append(line)
-
-        except IOError as e:
-            log.warning("I/O error filename={} error={}".format(filename,e.strerror))
-
-
     def register(self):
         """
-        Load the playbook testcases references
+        Load config files and load the playbook testcases references
         Does not load the testcases scenario
         Directory contains all testcases (one file per testcase)
         Arguments:
@@ -230,8 +157,11 @@ class Playbook(object):
         """
         log.info("Enter")
 
-        self.load_variables()
-        self.load_macros()
+        # Load our json files and macro (order variables/macros matters)
+        self._load_conf_json(name='agents')
+        self._load_conf_json(name='variables')
+        self._load_conf_json(name='playlists')
+        self._load_macros()
 
         nb = 0
         for filename in sorted(os.listdir(self.path+"/"+self.name+"/testcases")):
@@ -252,15 +182,30 @@ class Playbook(object):
         self.nb_testcases = nb
         log.debug("Number of registered testcases={}".format(self.nb_testcases))
         self._register_used_agents()
-        self._load_agents()
 
     def get_agents(self):
         """
-        Requirements : previous call to load_agents
-        Returns : agents json format
+        Requirements : Agent file should have been loaded
+        Returns : agents in json format
         """
         log.info("Enter")
         return json.dumps(self.agents, indent=4)
+
+    def get_variables(self):
+        """
+        Requirements : variables file should have been loaded
+        Returns : variables in json format
+        """
+        log.info("Enter")
+        return json.dumps(self.agents, indent=4)
+
+    def get_playlists(self):
+        """
+        Requirements : playlists file should have been loaded
+        Returns : playlists in json format
+        """
+        log.info("Enter")
+        return json.dumps(self.playlists, indent=4)
 
     def verify_agents(self):
         """
@@ -289,7 +234,7 @@ class Playbook(object):
         run attributs should be set
         Optional : testcase id (if none provided, all testcases are run)
         """
-        log.info("Enter (dryrun={})".format(self.dryrun))
+        log.info("Enter with id={} (dryrun={})".format(id, self.dryrun))
         for tc in self.testcases:
             if id:
                 if tc.id != id:
@@ -297,6 +242,29 @@ class Playbook(object):
 
             log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
             self.run_testcase(testcase=tc)
+
+    def run_playlist(self, id=None):
+        """
+        Requirements : playbook should have been registered
+        """
+        log.info("Enter with id={} (dryrun={})".format(id, self.dryrun))
+
+        if id not in self.playlists:
+            print("Playlist id={} is unknown. Aborting".format(id))
+            log.error("Playlist id={} is unknown".format(id))
+            raise SystemExit
+          
+        log.debug("playlist {} = {}".format(id,self.playlists[id]))
+
+        for tc_id in self.playlists[id]['list']:
+            log.debug("Processing tc_id={}".format(tc_id))
+            if tc_id in self.testcases_list:
+                log.debug("Playlist - Run testcase id={}".format(tc_id))
+                self.run_testcases(id=tc_id)
+                time.sleep(1)
+            else:
+                log.error("Playlist references an unknown testcase id={}".format(tc_id))
+                raise SystemExit
 
     def run_testcase(self, testcase=None):
         """
@@ -374,8 +342,6 @@ class Playbook(object):
         # Disconnect all agent (and closed the tracefile)
         self.disconnect_agents()
 
-    ### PRIVATE METHODS ###
-
     def disconnect_agents(self):
         """
         Go through all agent in our connection list,
@@ -387,6 +353,27 @@ class Playbook(object):
             for conn in self.agents_connections[agent]:
                 if not self.dryrun:
                     self.agents_connections[agent][conn].close()
+
+        # Empty our list for next testcase
+        self.agents_connections = {}
+
+    ### PRIVATE METHODS ###
+
+    def _get_agent_type(self, name=""):
+        """
+        Requirement : Agents should have been loaded
+        Returns the type of the agent called 'name'
+        """
+        log.info("Enter with name={}".format(name))
+
+        if name not in self.agents:
+            log.error("Unknown agent name {}".format(name))
+            raise SystemExit
+
+        type = self.agents[name]['type']
+        log.debug("name={} type={}".format(name, type))
+        return type
+
 
     def _create_agent_conn(self, name="", type="", conn=None):
         """
@@ -428,20 +415,92 @@ class Playbook(object):
 
         return result
 
-    def get_agent_type(self, name=""):
+    def _load_macros(self):
         """
-        Requirement : Agents should have been loaded
-        Returns the type of the agent called 'name'
+        Load the macros.txt file from conf/
+        """
+        log.info("Enter")
+        filename = self.path+"/"+self.name+"/conf/macros.txt"
+        in_macro = False
+
+        try:
+            with open(filename) as file_in:
+                for line in file_in:
+                    line = line.strip()
+                    ignore_line = False
+
+                    if line == "":
+                        continue
+                    if (line[0] == "#"):
+                        continue
+                    log.debug("read line={}".format(line))
+                    
+                    match_macro_prototype = re.search("^(?:macro\s+)(?P<name>[A-Za-z0-9\-_]+)(?:\s*)\((?P<params>\S+)\)\:",line)
+                    if match_macro_prototype and not in_macro:
+                        in_macro = True
+                        ignore_line = True
+                        name = match_macro_prototype.group('name')
+                        params = match_macro_prototype.group('params')
+                        log.debug("Matched macro prototype register macro name={} params={}".format(name, params))
+
+                        # register macro
+                        self.macros[name] = {}
+                        self.macros[name]['lines'] = []
+
+                        # register params, sorted in a list
+                        self.macros[name]['params'] = []
+                        for p in params.split(','):
+                            log.debug("Params={}".format(p))
+                            self.macros[name]['params'].append(p)
+
+                    match_macro_end = re.search("^end",line)
+                    if match_macro_end and in_macro:
+                        in_macro = False
+                        ignore_line = True
+                        log.debug("Matched end of macro")
+
+                    # Expands macro lines but ignore proto line and end
+                    if in_macro and not ignore_line:
+                        log.debug("Add line in macro line={}".format(line))
+                        self.macros[name]['lines'].append(line)
+
+        except IOError as e:
+            log.warning("I/O error filename={} error={}".format(filename,e.strerror))
+
+
+
+
+    def _load_conf_json(self, name=''):
+        """
+        Generic method to load conf json files
         """
         log.info("Enter with name={}".format(name))
 
-        if name not in self.agents:
-            log.error("Unknown agent name {}".format(name))
+        # Sanity
+        if name not in ['agents', 'variables', 'playlists']:
+            log.error("name is not allowed")
             raise SystemExit
 
-        type = self.agents[name]['type']
-        log.debug("name={} type={}".format(name, type))
-        return type
+        dir = self.path+"/"+self.name+"/conf"
+        file = self.path+"/"+self.name+"/conf/"+name+".json"
+        
+        # checks conf dir and json file exists
+        if not (os.path.exists(dir) and os.path.isdir(dir)):
+            print ("conf dir {} does not exist or is not a directory\n".format(dir))
+            raise SystemExit
+
+        if not (os.path.exists(file) and os.path.isfile(file)):
+            print ("warning : file {}.json does not exists ({})\n".format(name,file))
+        else :
+            log.debug("Loading {}".format(name))
+            with open(file, encoding='utf-8') as V:
+                if name=="playlists":
+                   self.playlists = json.loads(V.read())
+                elif name=="variables":
+                    self.variables = json.loads(V.read())
+                elif name=="agents":
+                    self.agents =  json.loads(V.read())
+            V.close() 
 
     def _get_agent_from_tc_line(self, id=None, line=""):
         """
@@ -469,7 +528,7 @@ class Playbook(object):
             log.debug("Found id={} agent={} conn={}".format(id, agent_name, agent_conn))
 
             # Get agent type from agent file
-            agent_type = self.get_agent_type(name=agent_name) 
+            agent_type = self._get_agent_type(name=agent_name) 
             log.debug("Found corresponding type={}".format(agent_type))
 
         elif match_message:
@@ -512,6 +571,8 @@ class Playbook(object):
         tc = Testcase(id=id, name=name, playbook=self.name, path=self.path,
                       filename=filename, macros=self.macros,
                       variables=self.variables)
+
+        self.testcases_list.append(id)
         self.testcases.append(tc)
 
     def _register_used_agents(self):
@@ -528,30 +589,6 @@ class Playbook(object):
                 if agent not in self.testcases_agents:
                     log.debug("Playbook new agent={}".format(agent))
                     self.testcases_agents.append(agent)
-
-    def _load_agents(self):
-        """
-        Requirements : an agent file should exists
-        Load all agents with their details from json file
-        """
-        log.info("Enter")
-
-        dir = self.path+"/"+self.name+"/conf"
-        file_agents = self.path+"/"+self.name+"/conf/agents.json"
-        
-        # checks agent conf dir and json file exists
-        if not (os.path.exists(dir) and os.path.isdir(dir)):
-            print ("conf dir {} does not exist or is not a directory\n".format(dir))
-            raise SystemExit
-
-        if not (os.path.exists(file_agents) and os.path.isfile(file_agents)):
-            print ("file agents.json does not exists ({})\n".format(file_agents))
-            raise SystemExit
-
-        log.debug("Loading agents")
-        with open(file_agents, encoding='utf-8') as F:
-            self.agents = json.loads(F.read())
-        F.close() 
 
     def _create_testcase_run_file_structure(self, testcase_id=None):
         """

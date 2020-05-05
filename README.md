@@ -2,23 +2,41 @@
 
 ## Definition
 
-Checkitbaby is a tool to allow automatic tests validations in a lab.
-It uses 'agents' to interact with the setup, for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
+Checkitbaby is a tool to allow automatic test validations in a lab.
+It uses some **Agents** to interact with the setup, for instance to play a simple client/server role, to change the setup topology or even to query the DUT. Agents are connected using ssh. It is recommended to use ssh keys.  
 
-**Playbooks** are defined as a collection of **Testcases**, each testcase is a simple text file where each lines defines an action applied to an **Agent**.
+**Playbooks** are defined as a collection of **Testcases**, each testcase is a simple text file where each line defines an action applied to an **Agent**.
 Each line of the testcase can either trigger an action and/or get some information and see if some requirements are met (checks).  
 Test scenario syntax is simple and evolutive, commands are defined keywords and depend on the type of agents targeted.  
 Multiple simultaneous connections to agents are supported. 
-**Variables** are allowed  in testcase. A variable is just a keyword encompassed with dollar signs '$' and defined in a variable file. 
-During testcases execution, ech **Run** information such as agent terminal ouputs are collected in log files. Test verifications are always be done from log file parsing, like a human would do. With this, it is possible to easily double-check the test result post-run.  **Marks** can be used as a delimeter for check verification within the agent log file.  
+**Variables** are allowed  in testcases. A variable is just a keyword encompassed with dollar signs '$' and defined in a variable file. 
+During testcases execution, each **Run** information such as agent terminal ouputs are collected in log files. Test verifications are always done from log file parsing, like a human would do. With this, it is possible to easily double-check the test result post-run.  **Marks** can be used as a delimeter for check verification within the agent log file.  
 
-When all the testcases from a Playbook has run, a **Report** in a json format is delivered. The report is organized by testcases and includes all checks results from the testcase.
-A general Pass/Fail covering all testcases is also included.  
-
-Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in **Dry-Run** mode to only validate the scenario file syntax for staging.  
+Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in **Dry-Run** mode to only validate the scenarios file syntax for staging purpose.  
 
 Checkitbaby focus is to run against a FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC). It can however be used in other contexts.  
 
+
+There are multiple ways to run a playbook:
+
+- Run the **entire playbook** :  
+  `python3 run_playbook --playbook <playbook_name>`
+
+- Run a **single testcase** from the playbook by its id :  
+  `python3 run_playbook --playbook <playbook_name> --testcase <test_case_id>`
+
+- Run a **playlist** of testcases from the playbook, defined in `conf/playlists.json`:  
+  `python3 run_playbook --playbook <playbook_name> --playlist <playlist_id>`
+
+For each possibility, it is possible to set options:
+
+  `--run`    : Designate the run directory where results will be stored  
+  `--dryrun` : Only performs a dry-run to validate scenario syntax (no connections to agents)  
+  `--debug`  : Turns debugging on (debug output in file debug.log)  
+  
+
+When all the testcases from a Playbook have run, a **Report** in a json format is created. The report is organized by testcases and includes all checks results from the testcase.
+A general Pass/Fail covering all testcases is also included.  
 
 ## Author
 Cedric GUSTAVE
@@ -34,11 +52,28 @@ Cedric GUSTAVE
 
 ##### Command line:
 
-* Running all testcases from a playbook :  
-  ex : 	`python3 run_playbook.py myPlaybook`
+~~~
+Usage: python3 run_playbook.py -playbook <playbookName>
 
-* Running a specific testcase from a playbook :  
-	`python3 run_playbook.py myPlaybook 003`
+Optional settings:
+
+    --playlist <playlist_id>
+    --testcase <tescase_id>
+    --run <run_id>
+    --dryrun
+    --debug
+~~~
+
+##### Examples
+
+  * Running all testcases from a playbook :  
+    ex : `python3 run_playbook.py --playbook myPlaybook`
+
+  * Running a specific testcase from a playbook :  
+	ex : `python3 run_playbook.py --playbook myPlaybook --testcase 003`
+
+  * Running a specific playlist from a playbook :
+    ex : `python3 run_playbook.py --playbook myPlaybook --playlist PL01`
 
 
 ##### Web integration:
@@ -61,14 +96,14 @@ The following directory tree structure is used to organize the tests :
 /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
 	  ex : /fortipoc/playbooks/advpn
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/agents.conf : files with agents definitions
-	  ex : /fortipoc/playbooks/advpn/agents.conf
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/agents.json: files with agents definitions
+	  ex : /fortipoc/playbooks/advpn/conf/agents.json
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/variables.conf : files with variables definitions
-	  ex : /fortipoc/playbooks/advpn/variables.conf
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/variables.conf : files with variables definitions
+	  ex : /fortipoc/playbooks/advpn/conf/variables.json
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/macros.txt : files with macro definitions
-	  ex : /fortipoc/playbooks/advpn/macros.txt
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/macros.txt : files with macro definitions
+	  ex : /fortipoc/playbooks/advpn/conf/macros.txt
 
 /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases : directory containing testcases
 	  ex : /fortipoc/playbooks/advpn/testcases
@@ -84,26 +119,31 @@ The following directory tree structure is used to organize the tests :
 
 * Creating a new playbook:
 
-Use program create_new_playbook.sh to create a new playbook file tree:
+Use `create_new_playbook.sh` to create a new playbook file tree:  
 `Usage : ./create_new_playbook.sh <playbook_name>`
 
 
 
 ## Agents
 
-Currently supported agents are : Debian LXC, Vyos routers, FortiGate devices, FortiPoC.  
+Currently supported agents are :
+  - Debian LXC (aka Linux host)
+  - Vyos routers
+  - FortiGate devices
+  - FortiPoC VMs
+
 A few agent-less functions are defined (for instance to wait or append some comments or *standard marks* in the logs)
 
 The generic syntax of each line of a testcase is as follow :  
-`__AGENT_NAME__:__AGENT_CONNECTION_ID__  __COMMAND__ __COMMAND_SPECIFIC_DATA__ `
+`<AGENT_NAME>:<AGENT_CONNECTION_ID>  <COMMAND> <COMMAND_SPECIFIC_DATA> `
 
-Each test/validation uses command 'check' followed by the test reference between square bracket [__TEST_NAME__].  
-The _TEST_NAME_ should be uniq in the testcase file.  
+Each test/validation uses command 'check' followed by the test reference between square bracket [TEST_NAME].  
+The _TEST_NAME_ should be unique in the testcase file.  
 A check may include a single or a list of *Requirements*. Requirements follow keyword 'has', they are provided as key=value pairs separated by spaces.
-A test pass if all provided requirements are met. If not requirement are provided, test would be succefull if an occurence was found.  
+A test pass if all provided requirements are met. If no requirements are provided, the test check would be succefull if an occurence was found.  
 
 Each line starting with comment sign '#' are ignored.  
-Lines are run sequentially.   
+Lines are ran sequentially.   
 
 SSH connections to agents are automatically opened and closed at the end of the testcase.  
 
@@ -114,19 +154,28 @@ The following chapter defines each agent command syntax and support.
 
 Following commands are not agent specific and can be used with all agents
 
+##### message "my message"
 ~~~
-
 # Append a message on the user output when running the testcase
 # This message is not append on the agent log file.
 message "set Branch 1 connections delays and losses"
+~~~
 
+##### mark "mark_id"
+~~~
 # Appends a mark on the agent log file (but not on user output)
 # This should be used to delimit checks parsing start (see check command 'since')
 HOSTS-B2:1 mark "receive_ready"
+~~~
 
+##### skip all
+~~~
 # Skip all following lines from the testcase
 skip all
+~~~
 
+##### wait (in seconds)
+~~~
 # Wait a number of seconds
 wait 30
 ~~~
@@ -134,9 +183,9 @@ wait 30
 
 #### Debian LXC
 
-Simple ping test.  
-Connection (UDP or TCP) one way or two-way test.  
-Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
+###### ping test
+optional maxloss and maxdelay requirements
+
 ~~~
 # Ping test, pass if at least one packet is not lost
 # Delay and loss are added in the report
@@ -145,6 +194,18 @@ LXC1-1:1 ping [con_test] 10.0.2.1
 # Ping test, pass if maximum packet loss under 50 %
 LXC1-1:1 ping [con_test] 10.0.2.1 maxloss 50
 
+# Ping test, pass if delay is < 10 ms
+# Uses variables $google_dns$ defined in conf/variables.json
+
+clt-1:2 ping [fail_delay_conntest] $google_dns$ maxdelay 10
+~~~
+
+###### connection test
+
+  Connection (UDP or TCP) one way or two-way test.  
+  Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
+
+~~~
 # Open a tcp server on port 8000  on agent LXC-1 from its connection 1
 LXC-1:1 open tcp 8000
 
@@ -173,14 +234,15 @@ LXC-2:1 check [2_traffic_reply_direction] data receive "bob" since "client ready
 
 # Close tcp socket from client side:
 LXC-1:1 close tcp
-
 ~~~
 
 
 #### Vyos
 
-Interact with vyos router. Does not generate tests results in reports.
+Interact with Vyos routers. Does not generate tests results in reports.
 
+###### traffic-policy 
+Changes the defined traffic-policy values
 ~~~
 # Change vyos device R1-B1 traffic-policy named 'WAN' settings 
 R1-B1:1 traffic-policy WAN delay 10 loss 0
@@ -204,7 +266,7 @@ FGT-B1-1:1 get status
 ###### Sessions
 
 Checks on FortiGate session table.
-This command has a first 'filter' section to select the sessions. An implicit 'diag sys session filter clear' is done before the command. Allowed keywords are :  
+This command has a first **'filter'** section to select the sessions. An implicit 'diag sys session filter clear' is done before the command. Allowed keywords are :  
 ['vd','sintf','dintf','src','nsrc','dst','proto','sport','nport','dport','policy','expire','duration','proto-state','session-state1','session-state2','ext-src','ext-dst','ext-src-negate','ext-dst-negate','negate']. Multiple selectors can be used if separated with space.  
 
 Supported requirements : 'state', 'src','dest','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total' (number of sessions)
@@ -260,7 +322,7 @@ FGT-A:1 check [route_ok] routing table bgp 10.0.0.0/24 next-hop 1.1.1.1 interfac
 
 ###### SD-WAN
 
-Various checks from `diagnose sys virtual-wan-link service __SERVICE__`
+Various checks from `diagnose sys virtual-wan-link service <SERVICE>`
 
 ~~~
 # check alive members :
@@ -279,6 +341,7 @@ FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 Interact with FortiPoC to bring ports up or down
 Using fpoc link up/down __device__ __port__
 
+###### link up / link down
 ~~~
 # Bring up link for FGT-B1-port1 switch side
 fpoc:1 link up FGT-B1-1 port1
@@ -289,11 +352,14 @@ fpoc:1 link down FGT-B1-1 port1
 
 
 ## Debug
-When running, all debugs are stored in file debug.log
-Usefull message (for instance to track syntax error in testcases definition) should be with level WARNING or ERROR.
+
+All debugs are stored in file 'debug.log'  
+Usefull messages (for instance to track syntax error in testcases definition) should be with level WARNING or ERROR.
 Program is aborted for level ERROR.
 
-sample :
+Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `--debug` 
+
+###### sample
 ~~~
 20200317:17:25:30,198 DEBUG   [playbook  .    get_agent_type      :  319] name=HOSTS-B2 type=lxc
 20200317:17:25:30,198 DEBUG   [playbook  .    _get_agent_from_tc_l:  347] Found corresponding type=lxc
@@ -309,13 +375,17 @@ sample :
 
 ### conf/macros.txt 
 
-This is a sample macro file, in playbooks/PLAYBOOK_NAME/conf/macros.txt  
+This is a sample macro file, in `playbooks/PLAYBOOK_NAME/conf/macros.txt`  
 Note that a variable 'server' is used in the macro, it is emcompassed with double-dollars '$$'.  
 This is made sso $$server$$ is translated to $server$ in the scenario during macro expansion, then variable 'server' (in conf/variables.xml) will be used to replace $server$ in the scenario.  
-- Example of a macro call (use &):  
+###### Example of a macro call
+
+Use & to reference a macro. 
 `&tcp_connection_check(H1B1,1,H1B2,1,9000)`  
 
-- Definition (macro.txt):
+###### Definition:
+Macros are defined in conf/macros.txt
+
 ~~~
 # Macro for connectivity check, one-way
 macro tcp_connection_check(client,client_conn,server,server_conn,port):
@@ -386,19 +456,19 @@ end
 
 ### conf/variables.xml 
 
-~~~
+```json
 {
         "H1B1" : "10.1.1.1",
         "H1B2" : "10.1.2.1",
-        "H2B1" : "10.2.1.1",
+		"H2B1" : "10.2.1.1",
         "H2B2" : "10.2.2.1"
 }
-~~~
+```
 
 
 ### conf/agents.xml
 
-~~~
+```json
 {
     "H1B1" : {
                  "type" : "lxc",
@@ -481,5 +551,47 @@ end
                 "ssh_key_file" : ""
               }
 }
+```
 
-~~~
+### conf/playlist.json
+
+This is a sample of a playlist file
+
+```json
+{
+   "PL01" : {
+               "comment" : "All LXC tests",
+               "list" : [ "010", "011" ]
+              }
+}
+```
+
+
+
+### run/1/report.json
+
+This is a sample of a report after a run with --run 1
+
+```json
+{
+    "result": true,
+    "testcases": {
+	    "010": {
+            "result": true,
+            "check": {
+			    "origin": true,
+                "reply": true
+            },
+		    "get": {}
+        },
+        "011": {
+		    "result": true,
+            "check": {
+                "tcp_forward_T69I": true,
+				"tcp_reply_T69I": true
+            },
+            "get": {}
+		}
+    }
+}
+```

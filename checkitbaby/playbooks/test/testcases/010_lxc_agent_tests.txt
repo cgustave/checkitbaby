@@ -17,4 +17,5 @@ clt-1:1 check [reply] "bob"
 
 clt-1:1 close
 srv-1:1 close
+#clt-1:2 close
 

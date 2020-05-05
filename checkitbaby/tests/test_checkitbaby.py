@@ -31,6 +31,11 @@ class CheckitbabyTestCase(unittest.TestCase):
         # Load the given playbook testcases 
         self.tr.load_playbook(name="test")
 
+        # Check our json files were loaded
+        print ("agents={}".format(self.tr.playbook.get_agents()))
+        print ("variables={}".format(self.tr.playbook.get_variables()))
+        print ("playlists={}".format(self.tr.playbook.get_playlists()))
+
         # Disable / Enable some of the testcases
         self.tr.playbook.testcases[0].disable()
         self.tr.playbook.testcases[0].enable()
@@ -49,7 +54,11 @@ class CheckitbabyTestCase(unittest.TestCase):
         self.tr.load_playbook(name="test", dryrun=True)
         self.tr.run_all_testcases(run=1)
 
-    #@unittest.skip
+    def test_dryrun_playlist(self):
+        self.tr.load_playbook(name="test", dryrun=True)
+        self.tr.run_playlist(id='PL01', run=1)
+
+    @unittest.skip
     # Run lxc test in local using 127.0.0.1 addresses
     def test_run_playbook_no_macro(self):
         self.tr.load_playbook(name="test", dryrun=False)
@@ -59,7 +68,7 @@ class CheckitbabyTestCase(unittest.TestCase):
         self.assertDictEqual(expected, report)
 
     # Run lxc test in local using 127.0.0.1 addresses
-    #@unittest.skip
+    @unittest.skip
     def test_run_playbook_with_macro(self):
         self.tr.load_playbook(name="test", dryrun=False)
         self.tr.run_testcase(run=1,id='011')

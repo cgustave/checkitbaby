@@ -62,6 +62,11 @@ CLASSES
      |  run_all_testcases(self, run=None)
      |      Runs the full playbook testcases on the given run id
      |  
+     |  run_playlist(self, run, id)
+     |      Runs a playlist specified by its id
+     |      Playlist should be defined in conf/playlists.conf 
+     |      and should reference existing testcases
+     |  
      |  run_report(self, run='1')
      |      Requirement : a minimum of a testcase should have been run on the given run id
      |      Provide a report from the last testcases that ran in run 1
