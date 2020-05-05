@@ -3,27 +3,31 @@
 ## Definition
 
 Checkitbaby is a tool to allow automatic tests validations in a lab.
-It uses 'agents' to interact with the setup for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
+It uses 'agents' to interact with the setup, for instance to play simple client/server role, to change the setup topology or even to query the DUT. Agent are connected using ssh. It is recommended to use ssh keys.  
 
-*Playbooks* are defined as a collection of *Testcases*, each testcase is a simple text file where each lines defines an action applied to an *Agent*.
+**Playbooks** are defined as a collection of **Testcases**, each testcase is a simple text file where each lines defines an action applied to an **Agent**.
 Each line of the testcase can either trigger an action and/or get some information and see if some requirements are met (checks).  
 Test scenario syntax is simple and evolutive, commands are defined keywords and depend on the type of agents targeted.  
 Multiple simultaneous connections to agents are supported. 
-*Variables* are allowed  in testcase. A variable is just a keyword starting with a dollar sign '$' and defined in a variable file. 
-During testcases execution, all *Run* information such as agent ouputs are collected in log files. The test verification would always be done from log file parsing like a human would do. With this, it is possible to easily double-check the test result post-run.  *Marks* can be used as a delimeter for check verification within the agent log file.  
+**Variables** are allowed  in testcase. A variable is just a keyword encompassed with dollar signs '$' and defined in a variable file. 
+During testcases execution, ech **Run** information such as agent terminal ouputs are collected in log files. Test verifications are always be done from log file parsing, like a human would do. With this, it is possible to easily double-check the test result post-run.  **Marks** can be used as a delimeter for check verification within the agent log file.  
 
-When all the testcases from a Playbook has run, a *Report* in a json format is delivered. The report is organized by testcases and include all checks results from the testcase.
+When all the testcases from a Playbook has run, a **Report** in a json format is delivered. The report is organized by testcases and includes all checks results from the testcase.
 A general Pass/Fail covering all testcases is also included.  
 
-Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in *Dry-Run* mode to only validate the scenario file syntax for staging.  
+Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in **Dry-Run** mode to only validate the scenario file syntax for staging.  
 
-Checkitbaby focus is to run against FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC)  
+Checkitbaby focus is to run against a FortiPoc setup, either from withing the PoC (from a testing lxc) or externaly to PoC (from user PC). It can however be used in other contexts.  
+
+
+## Author
+Cedric GUSTAVE
 
 
 ## Installation
 
-Will be deliver as python package (to be done)
-* Requirements : netcontrol python library: `pip install -I netcontrol`
+- Requirements : netcontrol python library: `pip install -I netcontrol`
+- Package is hosted on pypi, it should be installed using pip: `pip install -I checkitbaby`
 
 
 ## Usage
@@ -33,13 +37,14 @@ Will be deliver as python package (to be done)
 * Running all testcases from a playbook :  
   ex : 	`python3 run_playbook.py myPlaybook`
 
-* Running a specific testcase from a playbook
+* Running a specific testcase from a playbook :  
 	`python3 run_playbook.py myPlaybook 003`
+
 
 ##### Web integration:
 
-Planned.
-The idea is to load, select and run the defined testcases and provide a formated report.
+There is currently no web integration, this is however in the pipe.  
+A web GUI would be provided to : load, select and run the defined testcases and provide a formated report.
 
 
 ## Organization
@@ -56,18 +61,21 @@ The following directory tree structure is used to organize the tests :
 /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
 	  ex : /fortipoc/playbooks/advpn
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/agents.conf  : files with agents definitions
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/agents.conf : files with agents definitions
 	  ex : /fortipoc/playbooks/advpn/agents.conf
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/variables.conf :  files with variables definitions
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/variables.conf : files with variables definitions
 	  ex : /fortipoc/playbooks/advpn/variables.conf
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases    : directory containing testcases
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/macros.txt : files with macro definitions
+	  ex : /fortipoc/playbooks/advpn/macros.txt
+
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases : directory containing testcases
 	  ex : /fortipoc/playbooks/advpn/testcases
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases/NNN_TESTCASE_NAME : one testcase file
-	                                   with NNN : a number starting from 000 (to order testcases)
-									        TESTCASE_NAME : any name for the testcase
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/testcases/NNN_TESTCASE_NAME : one testcase file  
+     with NNN : a number starting from 000 (to order testcases)
+	 TESTCASE_NAME : any name for the testcase
 
       ex : /fortipoc/playbooks/advpn/testcases/001_spoke_to_hub_connectivity.txt
       ex : /fortipoc/playbooks/advpn/testcases/002_spoke_ipsec_tunnel.txt
@@ -294,4 +302,186 @@ sample :
 20200317:17:25:30,198 DEBUG   [playbook  .    _create_agent_conn  :  283] agent=HOSTS-B2 is already in our list
 20200317:17:25:30,198 DEBUG   [playbook  .    _create_agent_conn  :  303] Connection to HOSTS-B2:1 already exists
 20200317:17:25:30,198 DEBUG   [playbook  .    run_testcase        :  219] Agent already existing
+~~~
+
+
+## Files samples
+
+### conf/macros.txt 
+
+This is a sample macro file, in playbooks/PLAYBOOK_NAME/conf/macros.txt  
+Note that a variable 'server' is used in the macro, it is emcompassed with double-dollars '$$'.  
+This is made sso $$server$$ is translated to $server$ in the scenario during macro expansion, then variable 'server' (in conf/variables.xml) will be used to replace $server$ in the scenario.
+~~~
+# Macro for connectivity check, one-way
+# Uses a double-translation ($$server$$) so H1B2 need to be declared as a variables
+
+# example of call from testcase : &tcp_connectivity_check(H1B1,1,H1B2,1,9000)
+
+# Definition :
+macro tcp_connectivity_check(client,client_conn,server,server_conn,port):
+
+# create a random message
+set server_ready = random_string(8)
+set message = random_string(8)
+set test_id = random_string(4)
+
+# Open server on the given port
+$server$:$server_conn$ open tcp $port$
+$server$:$server_conn$ mark "$server_ready$"
+
+# Client connects
+$client$:$client_conn$ connect tcp $$server$$ 9000
+
+# Client send data on forward direction
+$client$:$client_conn$ send "$message$"
+
+# Server checks message is received
+$server$:$server_conn$ check [tcp_forward_$test_id$] "$message$" since "$server_ready$"
+
+# Closing
+$client$:$client_conn$ close
+$server$:$server_conn$ close
+end
+
+# ---
+
+# Macro for connectivity check, two-way
+# uses a double-translation for client and server that need to be defined
+
+# example of call : &tcp_connection_twoway_check(
+macro tcp_connectivity_twoway_check(client,client_conn,server,server_conn,port):
+
+# create a random message
+set server_ready = random_string(8)
+set client_ready = random_string(8)
+set message1 = random_string(8)
+set message2 = random_string(8)
+set test_id = random_string(4)
+
+# Open server on the given port
+$server$:$server_conn$ open tcp $port$
+$server$:$server_conn$ mark "$server_ready$"
+
+# Client connects
+$client$:$client_conn$ connect tcp $$server$$ 9000
+
+# Client send data on forward direction
+$client$:$client_conn$ send "$message1$"
+$client$:$client_conn$ mark "$client_ready$"
+
+# Server checks message1 is received
+$server$:$server_conn$ check [tcp_forward_$test_id$] "$message1$" since "$server_ready$"
+
+# Server send data on reply direction
+$server$:$server_conn$ send "$message2$"
+
+# Client checks message2 is received
+$client$:$client_conn$ check [tcp_reply_$test_id$] "$message2$" since "$client_ready$"
+
+
+# Closing
+$client$:$client_conn$ close
+$server$:$server_conn$ close
+end
+~~~
+
+### conf/variables.xml 
+
+~~~
+{
+        "H1B1" : "10.1.1.1",
+        "H1B2" : "10.1.2.1",
+        "H2B1" : "10.2.1.1",
+        "H2B2" : "10.2.2.1"
+}
+~~~
+
+
+### conf/agents.xml
+
+~~~
+{
+    "H1B1" : {
+                 "type" : "lxc",
+                 "ip" : "10.5.58.143",
+                 "port" : "10111",
+                 "login" : "root",
+                 "password" : "fortinet",
+                 "ssh_key_file" : ""
+             },
+    "H1B2" : {
+                "type" : "lxc",
+                "ip" : "10.5.58.143",
+                "port" : "10112",
+                "login" : "root",
+                "password" : "fortinet",
+                "ssh_key_file" : ""
+             },
+    "H2B2" : {
+                "type" : "lxc",
+                "ip" : "10.5.58.143",
+                "port" : "10114",
+                "login" : "root",
+                "password" : "fortinet",
+                "ssh_key_file" : ""
+             },
+    "R1B" :  {
+                "type" : "vyos",
+                "ip" : "10.5.58.143",
+                "port" : "10115",
+                "login" : "vyos",
+                "password" : "vyos",
+                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
+             },
+    "RINT" : {
+                "type" : "vyos",
+                "ip" : "10.5.58.143",
+                "port" : "10117",
+                "login" : "vyos",
+                "password" : "vyos",
+                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
+             },
+   "RMPLS" : {
+                "type" : "vyos",
+                "ip" : "10.5.58.143",
+                "port" : "10118",
+                "login" : "vyos",
+                "password" : "vyos",
+                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
+             },
+   "fpoc"  : {
+                "type" : "fortipoc",
+                "ip"   : "10.5.58.143",
+                "port" : "22",
+                "login" : "admin",
+                "password" : "",
+                "ssh_key_file" : ""
+              },
+   "F1B1_100F" : {
+                "type" : "fortigate",
+                "ip" : "10.5.52.144",
+                "port" : "22",
+                "login" : "admin",
+                "password" : "",
+                "ssh_key_file" : ""
+              },
+     "F1B1" : {
+                "type" : "fortigate",
+                "ip" : "10.5.58.143",
+                "port" : "10101",
+                "login" : "admin",
+                "password" : "",
+                "ssh_key_file" : ""
+              },
+     "F1B2" : {
+                "type" : "fortigate",
+                "ip" : "10.5.58.143",
+                "port" : "10102",
+                "login" : "admin",
+                "password" : "",
+                "ssh_key_file" : ""
+              }
+}
+
 ~~~
