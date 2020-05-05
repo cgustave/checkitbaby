@@ -75,12 +75,14 @@ class Checkitbaby(object):
         self.run = None                              # the run id identifier
         self.playbook = None                         # Playbook object instance 
         self.path = path                             # base path of the playbook store 
+        self.dryrun = False
 
     def load_playbook(self, name='', dryrun=False):
         """
         Loads a playbook as a first element of list self.playbook 
         """
         log.info("Enter with name={} dryrun={}".format(name, dryrun))
+        self.dryrun = dryrun
         self.playbook = Playbook(name=name, path=self.path, dryrun=dryrun, debug=self.debug)
         self.playbook.register()
 
@@ -96,10 +98,9 @@ class Checkitbaby(object):
         """
         Runs the full playbook testcases on the given run id
         """
-        log.info("Enter with run={}".format(run))
+        log.info("Enter with run={} (dry-run={})".format(run, self.dryrun))
         self.playbook.run = run
         self.playbook.run_testcases()
-
 
     def run_testcase(self, run, id):
         """

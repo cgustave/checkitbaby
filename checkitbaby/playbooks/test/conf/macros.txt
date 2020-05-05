@@ -4,7 +4,7 @@
 # example of call : &tcp_connectivity_check(H1B1,1,H1B2,1,9000)
 
 # Definition :
-macro tcp_connectivity_check(client,client_conn,server,server_conn,port):
+macro tcp_connection_check(client,client_conn,server,server_conn,port):
 
 # create a random message
 set server_ready = random_string(8)
@@ -16,7 +16,7 @@ $server$:$server_conn$ open tcp $port$
 $server$:$server_conn$ mark "$server_ready$"
 
 # Client connects
-$client$:$client_conn$ connect tcp $$server$$ 9000
+$client$:$client_conn$ connect tcp $$server$$ $port$
 
 # Client send data on forward direction
 $client$:$client_conn$ send "$message$"
@@ -35,7 +35,7 @@ end
 # uses a double-translation for client and server that need to be defined
 
 # example of call : &tcp_connection_twoway_check(
-macro tcp_connectivity_twoway_check(client,client_conn,server,server_conn,port):
+macro tcp_connection_twoway_check(client,client_conn,server,server_conn,port):
 
 # create a random message
 set server_ready = random_string(8)
@@ -49,7 +49,7 @@ $server$:$server_conn$ open tcp $port$
 $server$:$server_conn$ mark "$server_ready$"
 
 # Client connects
-$client$:$client_conn$ connect tcp $$server$$ 9000
+$client$:$client_conn$ connect tcp $$server$$ $port$
 
 # Client send data on forward direction
 $client$:$client_conn$ send "$message1$"

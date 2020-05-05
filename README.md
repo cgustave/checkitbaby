@@ -311,15 +311,14 @@ sample :
 
 This is a sample macro file, in playbooks/PLAYBOOK_NAME/conf/macros.txt  
 Note that a variable 'server' is used in the macro, it is emcompassed with double-dollars '$$'.  
-This is made sso $$server$$ is translated to $server$ in the scenario during macro expansion, then variable 'server' (in conf/variables.xml) will be used to replace $server$ in the scenario.
+This is made sso $$server$$ is translated to $server$ in the scenario during macro expansion, then variable 'server' (in conf/variables.xml) will be used to replace $server$ in the scenario.  
+- Example of a macro call (use &):  
+`&tcp_connection_check(H1B1,1,H1B2,1,9000)`  
+
+- Definition (macro.txt):
 ~~~
 # Macro for connectivity check, one-way
-# Uses a double-translation ($$server$$) so H1B2 need to be declared as a variables
-
-# example of call from testcase : &tcp_connectivity_check(H1B1,1,H1B2,1,9000)
-
-# Definition :
-macro tcp_connectivity_check(client,client_conn,server,server_conn,port):
+macro tcp_connection_check(client,client_conn,server,server_conn,port):
 
 # create a random message
 set server_ready = random_string(8)
@@ -331,7 +330,7 @@ $server$:$server_conn$ open tcp $port$
 $server$:$server_conn$ mark "$server_ready$"
 
 # Client connects
-$client$:$client_conn$ connect tcp $$server$$ 9000
+$client$:$client_conn$ connect tcp $$server$$ $port$
 
 # Client send data on forward direction
 $client$:$client_conn$ send "$message$"
@@ -349,8 +348,7 @@ end
 # Macro for connectivity check, two-way
 # uses a double-translation for client and server that need to be defined
 
-# example of call : &tcp_connection_twoway_check(
-macro tcp_connectivity_twoway_check(client,client_conn,server,server_conn,port):
+macro tcp_connection_twoway_check(client,client_conn,server,server_conn,port):
 
 # create a random message
 set server_ready = random_string(8)
@@ -364,7 +362,7 @@ $server$:$server_conn$ open tcp $port$
 $server$:$server_conn$ mark "$server_ready$"
 
 # Client connects
-$client$:$client_conn$ connect tcp $$server$$ 9000
+$client$:$client_conn$ connect tcp $$server$$ $port$
 
 # Client send data on forward direction
 $client$:$client_conn$ send "$message1$"

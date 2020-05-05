@@ -1,0 +1,3 @@
+# Macro call
+&tcp_connection_twoway_check(clt-1,1,srv-1,1,8000)
+

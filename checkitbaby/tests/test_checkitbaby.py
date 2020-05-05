@@ -6,6 +6,7 @@ Created on Feb 14, 2020
 '''
 import logging as log
 import unittest
+import json
 from checkitbaby import Checkitbaby
 
 # create logger
@@ -24,7 +25,7 @@ class CheckitbabyTestCase(unittest.TestCase):
     def setUp(self):
         self.tr = Checkitbaby(path='./playbooks', debug=True)
 
-    @unittest.skip  # no reason needed
+    #@unittest.skip  # no reason needed
     def test_loading(self):
 
         # Load the given playbook testcases 
@@ -41,18 +42,34 @@ class CheckitbabyTestCase(unittest.TestCase):
             print ("All agents required for selected testcases are defined\n")
         else:
             print ("Missing some agents to run selected testcases\n") 
+        self.assertEqual(self.tr.playbook.nb_testcases,5)
 
-        #self.assertEqual(self.tr.playbook.nb_testcases,2)
-
-    @unittest.skip  # no reason needed
+    #@unittest.skip  # no reason needed
     def test_dryrun_playbook(self):
         self.tr.load_playbook(name="test", dryrun=True)
         self.tr.run_all_testcases(run=1)
 
-    def test_run_playbook(self):
+    #@unittest.skip
+    # Run lxc test in local using 127.0.0.1 addresses
+    def test_run_playbook_no_macro(self):
         self.tr.load_playbook(name="test", dryrun=False)
-        self.tr.run_all_testcases(run=1)
-        print("report={}".format(self.tr.run_report()))
+        self.tr.run_testcase(run=1,id='010')
+        report = json.loads(self.tr.run_report())
+        expected = {'result':True,'testcases':{'010':{'result':True,'check':{'origin':True,'reply':True},'get':{}}}}
+        self.assertDictEqual(expected, report)
+
+    # Run lxc test in local using 127.0.0.1 addresses
+    #@unittest.skip
+    def test_run_playbook_with_macro(self):
+        self.tr.load_playbook(name="test", dryrun=False)
+        self.tr.run_testcase(run=1,id='011')
+        report = json.loads(self.tr.run_report())
+        # Report contains dynamic parts, only test overall result
+        result = report['result']
+        self.assertTrue(result, True)
+
+   
+
 
 
 if __name__ == '__main__':

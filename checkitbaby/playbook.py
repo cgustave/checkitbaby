@@ -289,7 +289,7 @@ class Playbook(object):
         run attributs should be set
         Optional : testcase id (if none provided, all testcases are run)
         """
-        log.info("Enter")
+        log.info("Enter (dryrun={})".format(self.dryrun))
         for tc in self.testcases:
             if id:
                 if tc.id != id:
@@ -307,7 +307,7 @@ class Playbook(object):
           - call generic processing (same for all agent), from agent.py
           - call agent specific processing
         """
-        log.info("Enter with Testcase id={} name={}".format(testcase.id, testcase.name))
+        log.info("Enter with Testcase id={} name={} (dryrun={})".format(testcase.id, testcase.name, self.dryrun))
         print("* Starting {} - {}".format(testcase.id, testcase.name)) 
 
         # remove old run logfiles and create run filestructure if needed
@@ -364,8 +364,12 @@ class Playbook(object):
             self.agents_connections[agent_name][agent_conn].report = self.report 
    
             # Run generic methods (in agent.py) and specific ones
-            translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
-            self.agents_connections[agent_name][agent_conn].process(line=translated_line)
+            if not self.dryrun:
+                translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
+                self.agents_connections[agent_name][agent_conn].process(line=translated_line)
+            else:
+                log.debug("dryrun - don't run agent_name={} agent_conn={} line={}".
+                          format(agent_name,agent_conn,line))
 
         # Disconnect all agent (and closed the tracefile)
         self.disconnect_agents()
@@ -381,7 +385,8 @@ class Playbook(object):
 
         for agent in self.agents_connections:
             for conn in self.agents_connections[agent]:
-                self.agents_connections[agent][conn].close()
+                if not self.dryrun:
+                    self.agents_connections[agent][conn].close()
 
     def _create_agent_conn(self, name="", type="", conn=None):
         """
