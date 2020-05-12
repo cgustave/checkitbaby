@@ -58,7 +58,6 @@ class CheckitbabyTestCase(unittest.TestCase):
         self.tr.load_playbook(name="test", dryrun=True)
         self.tr.run_playlist(id='PL01', run=1)
 
-    @unittest.skip
     # Run lxc test in local using 127.0.0.1 addresses
     def test_run_playbook_no_macro(self):
         self.tr.load_playbook(name="test", dryrun=False)
@@ -68,7 +67,6 @@ class CheckitbabyTestCase(unittest.TestCase):
         self.assertDictEqual(expected, report)
 
     # Run lxc test in local using 127.0.0.1 addresses
-    @unittest.skip
     def test_run_playbook_with_macro(self):
         self.tr.load_playbook(name="test", dryrun=False)
         self.tr.run_testcase(run=1,id='011')
@@ -76,10 +74,6 @@ class CheckitbabyTestCase(unittest.TestCase):
         # Report contains dynamic parts, only test overall result
         result = report['result']
         self.assertTrue(result, True)
-
-   
-
-
 
 if __name__ == '__main__':
     unittest.main()

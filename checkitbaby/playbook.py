@@ -135,7 +135,7 @@ class Playbook(object):
         self.playlists = {}           # Dictionary of our playlists (from conf/)
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
-        self.testcases_list = []      # List of registeres testcase id
+        self.testcases_list = []      # List of registered testcase id
         self.nb_testcases = 0  
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
