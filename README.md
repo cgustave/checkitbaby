@@ -249,7 +249,8 @@ R1-B1:1 traffic-policy WAN delay 10 loss 0
 ~~~
 
 #### FortiGate
-Interact with FortiGate device, generates test results and retrieve information added to the report.
+Interact with FortiGate device, generates test results and retrieve information added to the report.  
+Vdoms are supported.
 
 ###### Status
 
@@ -261,6 +262,20 @@ FGT-B1-1:1 check [FGT-B1_license] status has license=True
 # Added in the reports as respectively 'version' and 'license'
 FGT-B1-1:1 get status
 ~~~
+
+
+###### vdom support
+When a command need to be run inside a vdom, add vdom=VDOM_NAME just after the 1st command keyword.  
+Some examples :
+- to check vdom 'customer' has 12 bgp routes with 8 of them recursive routes:  
+  `F1B2:1 check [bgp_routes] bgp vdom=customer has total=12 recursive=8`
+
+- to check ssh session exist in vdom customer:  
+  `F1B2:1 check [ssh_session_exists] session vdom=customer filter dport=22`
+
+- to check SDWAN member is alive in SDWAN Rule 1 on vdom 'customer':  
+  `check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive`
+
 
 
 ###### Sessions
@@ -553,7 +568,7 @@ end
 }
 ```
 
-### conf/playlist.json
+### conf/playlists.json
 
 This is a sample of a playlist file
 
