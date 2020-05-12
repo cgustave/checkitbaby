@@ -1,88 +1,40 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 '''
 Created on Feb 14, 2020
 
 @author: cgustave
 '''
-import logging as log
-import sys, getopt
+import argparse
 from checkitbaby import Checkitbaby
 
-def main(argv):
+if __name__ == "__main__":
 
-    # Default values
-    playbook = None
-    playlist = ''
-    testcase = ''
-    run = 1
-    dryrun = False 
-    debug = False
+    parser = argparse.ArgumentParser(description='Run a test playbook')
+    parser.add_argument('--playbook', metavar="name",help="playbook to select", required=True)
+    parser.add_argument('--playlist', metavar="name", help="playlist to run from the playbook")
+    parser.add_argument('--testcase', metavar="id", help="testcase to run from the playbook")
+    parser.add_argument('--run', metavar="id", help="run id", default='1')
+    parser.add_argument('--dryrun',  help="dryrun mode", action="store_true", default=False)
+    parser.add_argument('--debug', '-d', help="turn on debug", action="store_true")
+    args = parser.parse_args()
 
-    try:
-        opts, args = getopt.getopt(argv,"hp:trd", ["playbook=","playlist=","testcase=", "run=", "dryrun", "debug"])
-    except getopt.GetoptError:
-        print_usage()
-        sys.exit(2)
-    
-    for opt,arg in opts:
-        if opt in ("-h", "--help"):
-            print_usage()
-            sys.exit()
-        elif opt in ("-p", "--playbook"):
-            playbook = arg
-        elif opt in ("-t", "--testcase"):
-            testcase = arg
-        elif opt in ("--playlist"):
-            playlist = arg
-        elif opt in ("-r", "--run"):
-            run = arg
-        elif opt == '--dryrun':
-            dryrun=True
-        elif opt == '--debug':
-            debug=True
+    cib = Checkitbaby(path='./playbooks', debug=args.debug)
+    cib.load_playbook(name=args.playbook, dryrun=args.dryrun)
 
-    # create logger
-    if debug:
-        log_level = log.DEBUG
+    if args.testcase:
+        print ("Running playbook {}, testcase {} only on run {}".
+               format(args.playbook, args.testcase, args.run))
+        cib.run_testcase(run=args.run, id=args.testcase)
+
+    elif args.playlist:
+        print ("Running playbook {}, playlist {} on run {}".
+               format(args.playbook, args.playlist, args.run))
+        cib.run_playlist(run=args.run, id=args.playlist)
     else:
-        log_level = log.INFO
-        
-    log.basicConfig(
-        format='%(asctime)s,%(msecs)3.3d %(levelname)-8s[%(module)-10.10s.\
-        %(funcName)-20.20s:%(lineno)5d] %(message)s',
-        datefmt='%Y%m%d:%H:%M:%S',
-        filename='debug.log',
-        level=log_level)
-
-    log.info("Starting run_playbook.py with playbook={} playlist={} testcase={} run={}".format(playbook,playlist,testcase,run))
-    
-    cib = Checkitbaby(path='./playbooks', debug=debug)
-    cib.load_playbook(name=playbook, dryrun=dryrun)
-
-    if testcase:
-        print ("Running playbook {}, testcase {} only on run {}".format(playbook, testcase, run))
-        cib.run_testcase(run=run, id=testcase)
-    elif playlist:
-        print ("Running playbook {}, playlist {} on run {}".format(playbook, playlist, run))
-        cib.run_playlist(run=run, id=playlist)
-    else:
-        print ("Running all playbook {} on run {}".format(playbook, run))
-        cib.run_all_testcases(run=run)
+        print ("Running all playbook {} on run {}".
+               format(args.playbook, args.run))
+        cib.run_all_testcases(run=args.run)
 
     # Print report
     print("report={}".format(cib.run_report()))
-
-
-def print_usage():
-
-    print("Usage: python3 run_playbook.py -playbook <playbookName>\n")
-    print("Optional settings:\n")
-    print("    --playlist <playlist_id>")
-    print("    --testcase <tescase_id>")
-    print("    --run <run_id>")
-    print("    --dryrun")
-    print("    --debug")
-
-
-if __name__ == "__main__":
-       main(sys.argv[1:])

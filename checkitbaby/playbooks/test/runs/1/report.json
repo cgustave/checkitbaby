@@ -12,8 +12,8 @@
         "011": {
             "result": true,
             "check": {
-                "tcp_forward_T69I": true,
-                "tcp_reply_T69I": true
+                "tcp_forward_TANA": true,
+                "tcp_reply_TANA": true
             },
             "get": {}
         }
