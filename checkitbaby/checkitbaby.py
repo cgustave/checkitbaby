@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Feb 12, 2019
+Created on Feb 12, 2020
 @author: cgustave
 
 This package provides main class Checkitbaby
@@ -46,7 +46,7 @@ class Checkitbaby(object):
 
     """
 
-    def __init__(self, path="/fortipoc/playbooks", debug=False):
+    def __init__(self, path="/fortipoc/playbooks", feedback=None, debug=False):
 
         # create logger
         log.basicConfig(
@@ -75,7 +75,8 @@ class Checkitbaby(object):
         self.run = None                              # the run id identifier
         self.playbook = None                         # Playbook object instance 
         self.path = path                             # base path of the playbook store 
-        self.dryrun = False
+        self.dryrun = False                          # Dryrun won't connect to any device
+        self.feedback = feedback                     # Feedback file
 
     def load_playbook(self, name='', dryrun=False):
         """
@@ -83,7 +84,7 @@ class Checkitbaby(object):
         """
         log.info("Enter with name={} dryrun={}".format(name, dryrun))
         self.dryrun = dryrun
-        self.playbook = Playbook(name=name, path=self.path, dryrun=dryrun, debug=self.debug)
+        self.playbook = Playbook(name=name, path=self.path, feedback=self.feedback, dryrun=dryrun, debug=self.debug)
         self.playbook.register()
 
     def get_playbook(self):
@@ -102,7 +103,7 @@ class Checkitbaby(object):
         self.playbook.run = run
         self.playbook.run_testcases()
 
-    def run_testcase(self, run, id):
+    def run_testcase(self, run, id, feedback=None):
         """
         Runs a single testcase specified by its id
         Returns True in no exception is caught

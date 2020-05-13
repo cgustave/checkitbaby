@@ -54,6 +54,7 @@ class Testcase(object):
         self.filename = filename
 
         self.lines = []      
+        self.nb_lines = 0           # Number of lines in the scenario
         self.state = True
         self.agents = []            # list of agents used in the scenario
         self.macros = macros        # macro definitions, dictionnay with macro name as key
@@ -74,9 +75,10 @@ class Testcase(object):
 
         try:
             with open(filename) as file_in:
+                index = 1 
                 for line in file_in:
                     line = line.strip()
-                    log.debug("read line={}".format(line))
+                    log.debug("index={} read line={}".format(index, line))
 
                     # Ignore empty lines and comments
                     if line == "":
@@ -102,9 +104,14 @@ class Testcase(object):
                             log.error("macro {} is not defined in conf/macros.txt".format(macro))
                             raise SystemExit
                         else :
-                            self.expand_macro(name=macro, params=params)
+                            added_lines = self.expand_macro(name=macro, params=params)
+                            index = index + added_lines
                     else:
                          self.lines.append(line)
+                         index = index + 1
+            
+                # Keep track of number of line for progress bar
+                self.nb_lines = index
 
         except IOError as e:
             log.debug("I/O error filename={} error={}".format(filename,e.strerror))
@@ -148,6 +155,8 @@ class Testcase(object):
 
         While expanding the macro, all params of the macro should be replaced
         with their given values
+
+        Return : number of lines expanded
         """
         log.info("Enter with name={} params={}".format(name, params))
 
@@ -158,6 +167,7 @@ class Testcase(object):
             params_values.append(p)
 
         # Extract parameters values
+        index = 1
         for line in self.macros[name]['lines']:
             log.debug("line={}".format(line))
 
@@ -170,6 +180,9 @@ class Testcase(object):
 
             log.debug("line after macro expansion = {}".format(line))
             self.lines.append(line)
+            index = index + 1
+
+        return index
 
 
     def expand_variables(self):

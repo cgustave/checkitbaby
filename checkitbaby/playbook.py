@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Feb 12, 2019
+Created on Feb 12, 2020
 @author: cgustave
 """
 
@@ -16,10 +16,12 @@ from lxc_agent import Lxc_agent
 from vyos_agent import Vyos_agent
 from fortipoc_agent import Fortipoc_agent
 from fortigate_agent import Fortigate_agent
+from feedback import Feedback
 
 class Playbook(object):
     """
     A Playbook is an ordered collection of Testcases.
+    Playbooks are located in directory provided by path
     Each Testcase is identified from a number (id)
 
     Testcases :
@@ -104,9 +106,11 @@ class Playbook(object):
        * Summary report :
        When testcases are run, a report file is kept updated.
          ex : /fortipoc/playbooks/advpn/run/1/report.json
+
+    Feedback : if --feedback provided, expects feedback on this file
     """
 
-    def __init__(self, name='', path='', run=1, dryrun=False, debug=False):
+    def __init__(self, name='', path='', run=1, dryrun=False, feedback=None, debug=False):
 
         # create logger
         log.basicConfig(
@@ -124,12 +128,14 @@ class Playbook(object):
             self.debug = False
             log.basicConfig(level='ERROR')
 
-        log.info("Constructor with name={} path={} run={} dryrun={} debug={}".format(name, path, run, dryrun, debug))
+        log.info("Constructor with name={} path={} run={} dryrun={} feedback={} debug={}".
+                 format(name, path, run, dryrun, feedback, debug))
 
         # Attributs
         self.name = name
         self.path = path
         self.run = run                # Run id
+        self.feedback = feedback
         self.macros = {}              
         self.variables = {}           
         self.playlists = {}           # Dictionary of our playlists (from conf/)
@@ -144,7 +150,9 @@ class Playbook(object):
         self.report = {}              # Playbook test report, key is testcase id
         self.report_summary = True    # Overall report summary, to be updated after each testcase
 
-
+        # Private attributs
+        self._FB = None               # Feedback file object, to be instanciated only if feedback path was given
+    
     def register(self):
         """
         Load config files and load the playbook testcases references
@@ -228,6 +236,43 @@ class Playbook(object):
 
         return result
 
+    def prepare_feedback(self):
+        """
+        Preparation for feedback file to be called before running tests
+        Create path if needed
+        Delete old file if needed
+        Write initial information
+        """
+        log.info("Enter")
+
+        if self.feedback:
+
+            # Create path if needed
+            path = self.path+"/"+self.name+"/runs/"+str(self.run)
+            p = Path(path)
+            try:
+                p.mkdir(parents=True)
+            except:
+                log.debug("path already created")
+
+            # Delete old feedback file if needed
+            if os.path.isfile(self.feedback):
+                log.debug("delete old feedback file")
+                os.remove(self.feedback)
+
+            # Write initial lines
+            log.debug("feedback required on file={}".format(self.feedback))
+            self._FB = Feedback(filename=path+"/"+self.feedback, debug=self.debug)
+            self._FB.delete()
+            self._FB.write(key="playbook_path", value=self.path)
+            self._FB.write(key="playbook", value=self.name)
+            self._FB.write(key="run", value=self.run)
+            self._FB.write(key="start_time", value=(int(time.time())))
+
+        else:
+            log.debug("no feedback required")
+
+
     def run_testcases(self, id=None):
         """
         Requirements : playbook should have been registered (and ideally verify_agents)
@@ -235,19 +280,42 @@ class Playbook(object):
         Optional : testcase id (if none provided, all testcases are run)
         """
         log.info("Enter with id={} (dryrun={})".format(id, self.dryrun))
+
+        if not id:
+            self.prepare_feedback()
+
+        index = 0 
         for tc in self.testcases:
+            index = index + 1
             if id:
                 if tc.id != id:
                     continue
 
-            log.debug("Run scenario id={} name={}".format(tc.id, tc.name))
+            log.debug("Run scenario index={} id={} name={}".format(index, tc.id, tc.name))
+
+            # Progress
+            if self.feedback:
+                progress = int((index / self.nb_testcases) * 100)
+                self._FB.write(key="progress", value=progress)
+
             self.run_testcase(testcase=tc)
+
+        # Finish with a 100%
+        if self.feedback and not id:
+            self._FB.write(key="progress", value=100)
+            self._FB.write(key="end_time", value=int(time.time()))
+
 
     def run_playlist(self, id=None):
         """
         Requirements : playbook should have been registered
         """
         log.info("Enter with id={} (dryrun={})".format(id, self.dryrun))
+
+        self.prepare_feedback()
+
+        if self.feedback:
+            self._FB.write(key="playlist_id", value=id)
 
         if id not in self.playlists:
             print("Playlist id={} is unknown. Aborting".format(id))
@@ -256,8 +324,12 @@ class Playbook(object):
           
         log.debug("playlist {} = {}".format(id,self.playlists[id]))
 
+        nb_testcases = len(self.playlists[id]['list'])
+
+        index = 0 
         for tc_id in self.playlists[id]['list']:
-            log.debug("Processing tc_id={}".format(tc_id))
+            index = index + 1
+            log.debug("index={} processing tc_id={}".format(index, tc_id))
             if tc_id in self.testcases_list:
                 log.debug("Playlist - Run testcase id={}".format(tc_id))
                 self.run_testcases(id=tc_id)
@@ -265,6 +337,17 @@ class Playbook(object):
             else:
                 log.error("Playlist references an unknown testcase id={}".format(tc_id))
                 raise SystemExit
+
+            # Progress
+            if self.feedback:
+                progress = int((index / nb_testcases) * 100)
+                self._FB.write(key="progress", value=progress)
+
+        # Make sure to finish with a 100%
+        if self.feedback:
+            self._FB.write(key="progress", value=100)
+            self._FB.write(key="end_time", value=int(time.time()))
+
 
     def run_testcase(self, testcase=None):
         """
@@ -281,8 +364,19 @@ class Playbook(object):
         # remove old run logfiles and create run filestructure if needed
         self._create_testcase_run_file_structure(testcase_id=testcase.id)
 
+        if self.feedback:
+            self._FB.write(key='testcase_id', value=testcase.id)
+            self._FB.write(key='testcase_name', value=testcase.name)
+
+        index = 0
         for line in testcase.lines:
-            log.debug("testcase line={}".format(line))
+            index = index + 1
+            log.debug("index={} testcase line={}".format(index, line))
+
+            # Progress
+            if self.feedback:
+                progress = int(index  / testcase.nb_lines * 100)
+                self._FB.write(key='testcase_progress', value=progress)
 
             # Get agent name, type and connection_id
             (agent_name, agent_type, agent_conn) = self._get_agent_from_tc_line(id=testcase.id, line=line)
@@ -338,6 +432,10 @@ class Playbook(object):
             else:
                 log.debug("dryrun - don't run agent_name={} agent_conn={} line={}".
                           format(agent_name,agent_conn,line))
+
+        # Terminate testcase progress with a 100%
+        if self.feedback:
+            self._FB.write(key='testcase_progress', value=100)
 
         # Disconnect all agent (and closed the tracefile)
         self.disconnect_agents()
@@ -562,6 +660,7 @@ class Playbook(object):
             print("warning: testcase id={} line={} : can't extract agent name and connection id (format NAME:ID)".format(id, line))
         return (agent_name, agent_type, agent_conn)
 
+
     def _register_testcase(self, id, name, filename):
         """
         Register one testcase from id and name
@@ -574,6 +673,7 @@ class Playbook(object):
 
         self.testcases_list.append(id)
         self.testcases.append(tc)
+
 
     def _register_used_agents(self):
         """
@@ -618,13 +718,12 @@ class Playbook(object):
             raise SystemExit
         
         path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
+        log.debug("Create if needed path={}".format(path))
         p = Path(path)
         try:
             p.mkdir(parents=True)
         except:
-            log.warning("path already created")
-
-        log.debug("Create if needed path={}".format(path))
+            log.debug("path already created")
 
         old_run_logs = path+"/*.log"
         if os.path.exists(path):
