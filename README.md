@@ -20,20 +20,20 @@ Checkitbaby focus is to run against a FortiPoc setup, either from withing the Po
 There are multiple ways to run a playbook:
 
 - Run the **entire playbook** :  
-  `python3 run_playbook --playbook <playbook_name>`
+  `python3 run_playbook --playbook <playbook_name> [--feedback <feedback_file> --run <run_id> --debug]`
 
 - Run a **single testcase** from the playbook by its id :  
-  `python3 run_playbook --playbook <playbook_name> --testcase <test_case_id>`
+  `python3 run_playbook --playbook <playbook_name> --testcase <test_case_id> [--feedback <feedback_file> ]`
 
 - Run a **playlist** of testcases from the playbook, defined in `conf/playlists.json`:  
-  `python3 run_playbook --playbook <playbook_name> --playlist <playlist_id>`
+  `python3 run_playbook --playbook <playbook_name> --playlist <playlist_id> [--feedback <feedback_file> --run <run_id> --debug]`
 
 For each possibility, it is possible to set options:
 
+  `--feedback <feedback>` : Feedback file expected from taskwatcher  
   `--run`    : Designate the run directory where results will be stored  
   `--dryrun` : Only performs a dry-run to validate scenario syntax (no connections to agents)  
   `--debug`  : Turns debugging on (debug output in file debug.log)  
-  
 
 When all the testcases from a Playbook have run, a **Report** in a json format is created. The report is organized by testcases and includes all checks results from the testcase.
 A general Pass/Fail covering all testcases is also included.  
@@ -67,13 +67,13 @@ Optional settings:
 ##### Examples
 
   * Running all testcases from a playbook :  
-    ex : `python3 run_playbook.py --playbook myPlaybook`
+    ex : `python3 run_playbook.py --playbook myPlaybook --path PlayBookPath`
 
   * Running a specific testcase from a playbook :  
-	ex : `python3 run_playbook.py --playbook myPlaybook --testcase 003`
+	ex : `python3 run_playbook.py --playbook myPlaybook --testcase 003 --path PlayBookPath`
 
   * Running a specific playlist from a playbook :
-    ex : `python3 run_playbook.py --playbook myPlaybook --playlist PL01`
+    ex : `python3 run_playbook.py --playbook myPlaybook --playlist PL01 --path PlayBookPath`
 
 
 ##### Web integration:
@@ -385,6 +385,23 @@ Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `-
 20200317:17:25:30,198 DEBUG   [playbook  .    run_testcase        :  219] Agent already existing
 ~~~
 
+###### Feedback file values
+
+Lists of possible feedback values :
+~~~
+[playbook_path]     : Path to playbook top directory 
+[playbook]          : playbook name
+[run]               : run id
+[testcase_id]	    : id of testcase
+[testcase_name]     : name of testcase
+[testcase_progress] : percentage of progress for the testcase
+[playlist_id]       : name of the playlist
+[progress]			: Overall progress for playbook, playlist or individual testcase
+[start_time]        : starting time in unix time
+[end_time]          : ending time in unix time
+~~~
+
+
 
 ## Files samples
 
@@ -469,7 +486,7 @@ $server$:$server_conn$ close
 end
 ~~~
 
-### conf/variables.xml 
+### conf/variables.json 
 
 ```json
 {
@@ -481,7 +498,7 @@ end
 ```
 
 
-### conf/agents.xml
+### conf/agents.json
 
 ```json
 {
