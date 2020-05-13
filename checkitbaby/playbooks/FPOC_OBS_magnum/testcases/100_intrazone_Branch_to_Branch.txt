@@ -1,6 +1,0 @@
-# Intrazone branch to branch test
-
-&tcp_connectivity_check(H1B1,1,H1B2,1,9000)
-
-
-

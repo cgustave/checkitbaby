@@ -25,7 +25,7 @@ CLASSES
         Checkitbaby
     
     class Checkitbaby(builtins.object)
-     |  Checkitbaby(path='/fortipoc/playbooks', debug=False)
+     |  Checkitbaby(path='/fortipoc/playbooks', feedback=None, debug=False)
      |  
      |  Main application. This is the interface with the user.
      |  Defines the global settings
@@ -49,7 +49,7 @@ CLASSES
      |  
      |  Methods defined here:
      |  
-     |  __init__(self, path='/fortipoc/playbooks', debug=False)
+     |  __init__(self, path='/fortipoc/playbooks', feedback=None, debug=False)
      |      Initialize self.  See help(type(self)) for accurate signature.
      |  
      |  get_playbook(self)
@@ -72,7 +72,7 @@ CLASSES
      |      Provide a report from the last testcases that ran in run 1
      |      Return: Report in json format
      |  
-     |  run_testcase(self, run, id)
+     |  run_testcase(self, run, id, feedback=None)
      |      Runs a single testcase specified by its id
      |      Returns True in no exception is caught
      |  

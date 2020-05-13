@@ -23,7 +23,7 @@ class CheckitbabyTestCase(unittest.TestCase):
 
     # Always run before any test
     def setUp(self):
-        self.tr = Checkitbaby(path='./playbooks', debug=True)
+        self.tr = Checkitbaby(path='./tests/playbooks', debug=True)
 
     #@unittest.skip  # no reason needed
     def test_loading(self):

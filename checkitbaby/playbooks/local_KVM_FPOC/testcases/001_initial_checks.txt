@@ -1,7 +1,0 @@
-# Verify FortiGate VM licenses are OK
-
-message "check VM licenses are OK"
-FGT-B1-1:1 check [FGT-B1_license] status has license=True
-FGT-B2-9:1 check [FGT-B2_license] status has license=True
-FGT-H1-253:1 check [FGT-H1_license] status has license=True
- 
