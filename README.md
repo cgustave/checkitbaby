@@ -25,7 +25,7 @@ There are multiple ways to run a playbook:
 - Run a **single testcase** from the playbook by its id :  
   `python3 run_playbook --playbook <playbook_name> --testcase <test_case_id> [--feedback <feedback_file> ]`
 
-- Run a **playlist** of testcases from the playbook, defined in `conf/playlists.json`:  
+- Run a **playlist** of testcases from the playbook, defined in `conf/playlists.yml`:  
   `python3 run_playbook --playbook <playbook_name> --playlist <playlist_id> [--feedback <feedback_file> --run <run_id> --debug]`
 
 For each possibility, it is possible to set options:
@@ -96,11 +96,11 @@ The following directory tree structure is used to organize the tests :
 /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME
 	  ex : /fortipoc/playbooks/advpn
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/agents.json: files with agents definitions
-	  ex : /fortipoc/playbooks/advpn/conf/agents.json
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/agents.yml: files with agents definitions
+	  ex : /fortipoc/playbooks/advpn/conf/agents.yml
 
-/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/variables.conf : files with variables definitions
-	  ex : /fortipoc/playbooks/advpn/conf/variables.json
+/PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/variables.yml : files with variables definitions
+	  ex : /fortipoc/playbooks/advpn/conf/variables.yml
 
 /PLAYBOOK_BASE_PATH/ANY_PLAYBOOK_NAME/conf/macros.txt : files with macro definitions
 	  ex : /fortipoc/playbooks/advpn/conf/macros.txt
@@ -195,7 +195,7 @@ LXC1-1:1 ping [con_test] 10.0.2.1
 LXC1-1:1 ping [con_test] 10.0.2.1 maxloss 50
 
 # Ping test, pass if delay is < 10 ms
-# Uses variables $google_dns$ defined in conf/variables.json
+# Uses variables $google_dns$ defined in conf/variables.yml
 
 clt-1:2 ping [fail_delay_conntest] $google_dns$ maxdelay 10
 ~~~
@@ -374,7 +374,7 @@ Program is aborted for level ERROR.
 
 Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `--debug` 
 
-###### sample
+### sample
 ~~~
 20200317:17:25:30,198 DEBUG   [playbook  .    get_agent_type      :  319] name=HOSTS-B2 type=lxc
 20200317:17:25:30,198 DEBUG   [playbook  .    _get_agent_from_tc_l:  347] Found corresponding type=lxc
@@ -385,7 +385,8 @@ Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `-
 20200317:17:25:30,198 DEBUG   [playbook  .    run_testcase        :  219] Agent already existing
 ~~~
 
-###### Feedback file values
+
+### Feedback file values
 
 Lists of possible feedback values :
 ~~~
@@ -402,8 +403,7 @@ Lists of possible feedback values :
 ~~~
 
 
-
-## Files samples
+### Files samples
 
 ### conf/macros.txt 
 
@@ -486,116 +486,104 @@ $server$:$server_conn$ close
 end
 ~~~
 
-### conf/variables.json 
+### conf/variables.yml 
 
-```json
-{
-        "H1B1" : "10.1.1.1",
-        "H1B2" : "10.1.2.1",
-		"H2B1" : "10.2.1.1",
-        "H2B2" : "10.2.2.1"
-}
+```yamel
+---
+# checkitbaby variables definition file
+
+srv-1: 127.0.0.1
+cli-1: 127.0.0.1
+localhost: 127.0.0.1
+google_dns: 8.8.8.8
+unreachable_host: 169.254.33.111
 ```
 
 
-### conf/agents.json
+### conf/agents.yml
 
-```json
-{
-    "H1B1" : {
-                 "type" : "lxc",
-                 "ip" : "10.5.58.143",
-                 "port" : "10111",
-                 "login" : "root",
-                 "password" : "fortinet",
-                 "ssh_key_file" : ""
-             },
-    "H1B2" : {
-                "type" : "lxc",
-                "ip" : "10.5.58.143",
-                "port" : "10112",
-                "login" : "root",
-                "password" : "fortinet",
-                "ssh_key_file" : ""
-             },
-    "H2B2" : {
-                "type" : "lxc",
-                "ip" : "10.5.58.143",
-                "port" : "10114",
-                "login" : "root",
-                "password" : "fortinet",
-                "ssh_key_file" : ""
-             },
-    "R1B" :  {
-                "type" : "vyos",
-                "ip" : "10.5.58.143",
-                "port" : "10115",
-                "login" : "vyos",
-                "password" : "vyos",
-                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
-             },
-    "RINT" : {
-                "type" : "vyos",
-                "ip" : "10.5.58.143",
-                "port" : "10117",
-                "login" : "vyos",
-                "password" : "vyos",
-                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
-             },
-   "RMPLS" : {
-                "type" : "vyos",
-                "ip" : "10.5.58.143",
-                "port" : "10118",
-                "login" : "vyos",
-                "password" : "vyos",
-                "ssh_key_file" : "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
-             },
-   "fpoc"  : {
-                "type" : "fortipoc",
-                "ip"   : "10.5.58.143",
-                "port" : "22",
-                "login" : "admin",
-                "password" : "",
-                "ssh_key_file" : ""
-              },
-   "F1B1_100F" : {
-                "type" : "fortigate",
-                "ip" : "10.5.52.144",
-                "port" : "22",
-                "login" : "admin",
-                "password" : "",
-                "ssh_key_file" : ""
-              },
-     "F1B1" : {
-                "type" : "fortigate",
-                "ip" : "10.5.58.143",
-                "port" : "10101",
-                "login" : "admin",
-                "password" : "",
-                "ssh_key_file" : ""
-              },
-     "F1B2" : {
-                "type" : "fortigate",
-                "ip" : "10.5.58.143",
-                "port" : "10102",
-                "login" : "admin",
-                "password" : "",
-                "ssh_key_file" : ""
-              }
-}
+```yamel
+---
+# checkitbaby agents definition file
+
+# LXC
+
+clt-1:
+  type: lxc
+  ip: 127.0.0.1
+  port: 22
+  login: cgustave
+  password: ''
+  ssh_key_file: "/home/cgustave/.ssh/id_rsa"
+
+srv-1:
+  type: lxc
+  ip: 127.0.0.1
+  port: 22
+  login: cgustave
+  password: ''
+  ssh_key_file: "/home/cgustave/.ssh/id_rsa"
+
+# Vyos
+
+R1-B1:
+  type: vyos
+  ip: 192.168.122.178
+  port: '10111'
+  login: vyos
+  password: vyos
+  ssh_key_file: "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
+
+R2-B1:
+  type: vyos
+  ip: 192.168.122.178
+  port: '10113'
+  login: vyos
+  password: vyos
+  ssh_key_file: "/home/cgustave/github/python/checkitbaby/checkitbaby/playbooks/test/conf/id_rsa"
+
+# FortiPoC
+
+fpoc:
+  type: fortipoc
+  ip: 192.168.122.178
+  port: '22'
+  login: admin
+  password: ''
+  ssh_key_file: ''
+
+# FortiGate
+
+FGT-B1-1:
+  type: fortigate
+  ip: 192.168.122.178
+  port: '10101'
+  login: admin
+  password: ''
+  ssh_key_file: ''
+
+FGT-B2-9:
+  type: fortigate
+  ip: 192.168.122.178
+  port: '10102'
+  login: admin
+  password: ''
+  ssh_key_file: ''
 ```
 
-### conf/playlists.json
+### conf/playlists.yml
 
 This is a sample of a playlist file
 
-```json
-{
-   "PL01" : {
-               "comment" : "All LXC tests",
-               "list" : [ "010", "011" ]
-              }
-}
+```yamel
+---
+# checkitbaby playlist definition file
+
+PL01:
+  comment: All LXC tests
+  list:
+  - '010'
+  - '011'
 ```
 
 

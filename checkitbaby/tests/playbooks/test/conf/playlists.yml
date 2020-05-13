@@ -1,0 +1,8 @@
+---
+# checkitbaby playlist definition file
+
+PL01:
+  comment: All LXC tests
+  list:
+  - '010'
+  - '011'

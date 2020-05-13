@@ -10,6 +10,7 @@ import glob
 import re
 import json
 import time
+import yaml
 from pathlib import Path
 from testcase import Testcase
 from lxc_agent import Lxc_agent
@@ -166,9 +167,9 @@ class Playbook(object):
         log.info("Enter")
 
         # Load our json files and macro (order variables/macros matters)
-        self._load_conf_json(name='agents')
-        self._load_conf_json(name='variables')
-        self._load_conf_json(name='playlists')
+        self._load_conf_yaml(name='agents')
+        self._load_conf_yaml(name='variables')
+        self._load_conf_yaml(name='playlists')
         self._load_macros()
 
         nb = 0
@@ -567,10 +568,9 @@ class Playbook(object):
 
 
 
-
-    def _load_conf_json(self, name=''):
+    def _load_conf_yaml(self, name=''):
         """
-        Generic method to load conf json files
+        Generic method to load conf yamel files
         """
         log.info("Enter with name={}".format(name))
 
@@ -580,24 +580,24 @@ class Playbook(object):
             raise SystemExit
 
         dir = self.path+"/"+self.name+"/conf"
-        file = self.path+"/"+self.name+"/conf/"+name+".json"
+        file = self.path+"/"+self.name+"/conf/"+name+".yml"
         
-        # checks conf dir and json file exists
+        # checks conf dir and yml file exists
         if not (os.path.exists(dir) and os.path.isdir(dir)):
             print ("conf dir {} does not exist or is not a directory\n".format(dir))
             raise SystemExit
 
         if not (os.path.exists(file) and os.path.isfile(file)):
-            print ("warning : file {}.json does not exists ({})\n".format(name,file))
+            print ("warning : file {}.yml does not exists ({})\n".format(name,file))
         else :
             log.debug("Loading {}".format(name))
             with open(file, encoding='utf-8') as V:
                 if name=="playlists":
-                   self.playlists = json.loads(V.read())
+                   self.playlists = yaml.safe_load(V.read())
                 elif name=="variables":
-                    self.variables = json.loads(V.read())
+                    self.variables =yaml.safe_load(V.read())
                 elif name=="agents":
-                    self.agents =  json.loads(V.read())
+                    self.agents =  yaml.safe_load(V.read())
             V.close() 
 
     def _get_agent_from_tc_line(self, id=None, line=""):
