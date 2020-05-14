@@ -1,3 +1,4 @@
 paramiko
 netcontrol
+wheel
 pyyaml
