@@ -388,7 +388,12 @@ Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `-
 
 ### Feedback file values
 
-Lists of possible feedback values :
+Setting a feedback file is optinal. When enabled, a live flow of information from the running test will be sent to a 'feedback' file.
+Information are formatted to be interpretted by a program, for instance to update a progress bar on web intergration.
+The primary goal is to allow a web integration to checkitbaby.
+Feedback files are not required when running checkitbaby as a script from command line.
+
+Lists of possible feedback values implemented :
 ~~~
 [playbook_path]     : Path to playbook top directory 
 [playbook]          : playbook name
