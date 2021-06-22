@@ -47,11 +47,11 @@ class Fortigate_agent(Agent):
 
         # Attributs to be set before processing
         self.path = ""
-        self.playbook = None
-        self.run = None
-        self.agent = None        # name, id ... and all info for the agent itself
-        self.testcase = None     # For which testcase id the agent was created
-        self.report = None       # Testcase report (provided from Workbook)
+        self.playbook = ""
+        self.run = ""
+        self.agent = {}          # name, id ... and all info for the agent itself
+        self.testcase = ""     # For which testcase id the agent was created
+        self.report = {}         # Testcase report (provided from Workbook)
 
         # Private attributs
         self._connected = False  # ssh connection state with the agent
@@ -80,13 +80,14 @@ class Fortigate_agent(Agent):
             log.debug("No command has matched")
 
         if command == 'get':
-            self.cmd_get(line)
+            result = self.cmd_get(line)
         elif command == 'check':
-             self.cmd_check(line)
+             result = self.cmd_check(line)
         elif command == 'flush':
             self.cmd_flush(line)
         else:
             log.warning("command {} is unknown".format(command))
+        return result
 
     def cmd_flush(self, line=""):
         """
@@ -126,6 +127,7 @@ class Fortigate_agent(Agent):
                  log.debug("==> result={}".format(result))
                  self.add_report_entry(get='version', result=result['version'])
                  self.add_report_entry(get='license', result=result['license'])
+                 return result
              else:
                  log.debug("dry-run")
         else:
@@ -145,15 +147,15 @@ class Fortigate_agent(Agent):
           name =  match_command.group('name')
           command = match_command.group('command')
           if command == 'session':
-              self._cmd_check_session(name=name, line=line)
+              result = self._cmd_check_session(name=name, line=line)
           elif command == 'bgp':
-              self._cmd_check_bgp(name=name, line=line)
+              result = self._cmd_check_bgp(name=name, line=line)
           elif command == 'status':
-              self._cmd_check_status(name=name, line=line)
+              result = self._cmd_check_status(name=name, line=line)
           elif command == 'sdwan':
-              self._cmd_check_sdwan(name=name, line=line)
+              result = self._cmd_check_sdwan(name=name, line=line)
           elif command == 'ike':
-              self._cmd_check_ike(name=name, line=line)
+              result = self._cmd_check_ike(name=name, line=line)
 
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
@@ -161,6 +163,7 @@ class Fortigate_agent(Agent):
         else:
            log.error("Could not understand check command syntax")
            raise SystemExit
+        return result
 
 
     def _cmd_enter_vdom(self, vdom=""):
@@ -214,7 +217,7 @@ class Fortigate_agent(Agent):
             self._cmd_enter_vdom(vdom=vd)
             found = True
 
-        # remove vdom= from line id needed
+        # remove vdom= from line is needed for further processing
         if found:
             line = re.sub("vdom=\S+\s", '', line)
             log.debug("stripped line={}".format(line))
@@ -385,10 +388,10 @@ class Fortigate_agent(Agent):
                     rvalue = match_req.group('rvalue')
                     log.debug("Checking requirement {}={}".format(rname, rvalue))
                     rfdb = self._check_status_requirement(rname=rname, rvalue=rvalue, result=result)
-                    feedback = feedback and rfdb
+                    feedback = feedback and rfdbD
 
         self.add_report_entry(check=name, result=feedback)
-        return found_flag
+        return feedback
 
     def _cmd_check_session(self, name="", line=""):
         """
@@ -502,7 +505,7 @@ class Fortigate_agent(Agent):
             else :
                 log.debug("state {} is not set, requirement is not met".format(rvalue))
                 fb = False
-        elif rname in ('src','dest','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total'):
+        elif rname in ('src','dst','sport','dport','proto','proto_state','duration','expire','timeout','dev','gwy','total'):
             log.debug("Accepted requirement rname={}".format(rname))
             fb = self.check_generic_requirement(result=result, rname=rname, rvalue=rvalue)
         else:
@@ -523,12 +526,20 @@ class Fortigate_agent(Agent):
         if not 'license' in result:
             result['license'] = {}
 
-        if rname=='license':
-            log.debug("Checking license")
+        if rname == 'license':
+            log.debug("Checking license requirement")
             if str(result['license']) == str(rvalue):
                 log.debug("License requirement is met")
             else:
                 log.debug("License requirement is not met")
+                fb = False
+
+        if rname == 'version':
+            log.debug("Checking version requirement")
+            if str(result['version']) == str(rvalue):
+                log.debug("Version requirement is met")
+            else:
+                log.debug("Version requirement is not met")
                 fb = False
         return fb
 

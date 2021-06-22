@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Created on June 22, 2021
-
 @author: cgustave
+
+FortSwitch Agent unittest to be run agains test FortiPoC "checkitbaby_tests"
+~/github/python/packages/checkitbaby (master *)$ source venv/bin/activate
+(venv) ~/github/python/packages/checkitbaby (master *)$ cd checkitbaby/
+(venv) ~/github/python/packages/checkitbaby/checkitbaby (master *)$ python tests/test_fortiswitch.py
 '''
 import logging as log
 import unittest
@@ -15,19 +19,22 @@ log.basicConfig(
     datefmt='%Y%m%d:%H:%M:%S',
     filename='debug.log',
     level=log.DEBUG)
-
 log.debug("Start unittest")
 
 class Fortiswitch_agentTestCase(unittest.TestCase):
 
-    # Always run before any test
+
     def setUp(self):
+        # Create specific agent and provide connection details
+        # to be run against Testing FortiPoC
         self.fsw = Fortiswitch_agent(debug=True)
+        # Connection details
         self.fsw.agent['ip'] = '192.168.122.178'
         self.fsw.agent['port'] = '10104'
         self.fsw.agent['login'] = 'admin'
         self.fsw.agent['password'] = 'fortinet'
         self.fsw.agent['ssh_key_file'] = ''
+        # Feed agent with information it needs for its job
         self.fsw.path='/home/cgustave/github/python/packages/checkitbaby/checkitbaby/tests/playbooks'
         self.fsw.playbook='test'
         self.fsw.run='1'

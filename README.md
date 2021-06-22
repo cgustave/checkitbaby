@@ -294,10 +294,10 @@ Supported requirements : 'state', 'src','dest','sport','dport','proto','proto_st
 FGT-B1-1:1 check [session_tcp9000] session filter dport=9000
 
 # Checks that a least a session with dport 22 and dest ip 192.168.0.1 exists
-FGT-B1-1 check [ssh_session_exist] session filter dport=22 dest=192.168.0.1
+FGT-B1-1 check [ssh_session_exist] session filter dport=22 dst=192.168.0.1
 
 # Checks that session with destination port 5000 has dirty flag set
-FGT-B1-1 check [session_is_dirty] session filter dport=5000 has flag=dirty
+FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 ~~~
 
 ###### IPsec tunnel
