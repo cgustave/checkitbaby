@@ -1,4 +1,4 @@
-# Checkitbaby 
+# Checkitbaby
 
 ## Definition
 
@@ -8,8 +8,8 @@ It uses some **Agents** to interact with the setup, for instance to play a simpl
 **Playbooks** are defined as a collection of **Testcases**, each testcase is a simple text file where each line defines an action applied to an **Agent**.
 Each line of the testcase can either trigger an action and/or get some information and see if some requirements are met (checks).  
 Test scenario syntax is simple and evolutive, commands are defined keywords and depend on the type of agents targeted.  
-Multiple simultaneous connections to agents are supported. 
-**Variables** are allowed  in testcases. A variable is just a keyword encompassed with dollar signs '$' and defined in a variable file. 
+Multiple simultaneous connections to agents are supported.
+**Variables** are allowed  in testcases. A variable is just a keyword encompassed with dollar signs '$' and defined in a variable file.
 During testcases execution, each **Run** information such as agent terminal ouputs are collected in log files. Test verifications are always done from log file parsing, like a human would do. With this, it is possible to easily double-check the test result post-run.  **Marks** can be used as a delimeter for check verification within the agent log file.  
 
 Checkitbaby can be simply run as a script to run all or some testcases against the setup. It is possible to run the testcase in **Dry-Run** mode to only validate the scenarios file syntax for staging purpose.  
@@ -131,6 +131,7 @@ Currently supported agents are :
   - Vyos routers
   - FortiGate devices
   - FortiPoC VMs
+  - Fortiswitches
 
 A few agent-less functions are defined (for instance to wait or append some comments or *standard marks* in the logs)
 
@@ -204,6 +205,9 @@ clt-1:2 ping [fail_delay_conntest] $google_dns$ maxdelay 10
 
   Connection (UDP or TCP) one way or two-way test.  
   Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
+  Connectivity test is using netcat-openbsd package *which has a different syntax than netcat-traditional to specify listening port*.  
+  Make sure netcat-openbsd is installed otherwise server would listen on a random port (netcat-traditional is expecting -l -p PORT whild bsd wants -l PORT
+
 
 ~~~
 # Open a tcp server on port 8000  on agent LXC-1 from its connection 1
@@ -221,7 +225,7 @@ LXC-2:1 data send "alice"
 # Check data 'alice' is received server. Test is called '1_traffic_origin_direction'
 # Parsing on server log file starts at mark "server ready"
 LXC-1:1 check [1_traffic_origin_direction] data receive "alice" since "server ready"
-												
+
 # Append a mark "client ready" on client log file
 LXC-2:1 mark "client ready"
 
@@ -241,10 +245,10 @@ LXC-1:1 close tcp
 
 Interact with Vyos routers. Does not generate tests results in reports.
 
-###### traffic-policy 
+###### traffic-policy
 Changes the defined traffic-policy values
 ~~~
-# Change vyos device R1-B1 traffic-policy named 'WAN' settings 
+# Change vyos device R1-B1 traffic-policy named 'WAN' settings
 R1-B1:1 traffic-policy WAN delay 10 loss 0
 ~~~
 
@@ -299,10 +303,10 @@ FGT-B1-1 check [session_is_dirty] session filter dport=5000 has flag=dirty
 ###### IPsec tunnel
 
 - Generic checks on IPsec based on `diagnose vpn ike status`
-- flush all ike gateway 
+- flush all ike gateway
 
 ~~~
-# Flush all ike gateways ('diagnose vpn ike gateway flush') 
+# Flush all ike gateways ('diagnose vpn ike gateway flush')
 FGT-B1-1:1 flush ike gateway
 
 # Check number of established ike tunnels
@@ -366,13 +370,37 @@ fpoc:1 link down FGT-B1-1 port1
 ~~~
 
 
+#### Fortiswitch
+
+Interact with FortiSwitch (hardware or VM) to bring ports admin up or down
+Check status of a port1 and eventually expect a certain state
+
+###### link up / link down
+~~~
+# Bring port admin up
+fsw:1 port up port10
+
+# Bring port admin down
+fsw:1 port down port10
+~~~
+
+###### check port link status
+~~~
+# Check to get port status for record only purpose
+fsw:1 check [status_port10] port status port10
+
+# Check port status and expect status to be up
+fsw:1 check [status_port10] port status port10 has state=up
+~~~
+
+
 ## Debug
 
 All debugs are stored in file 'debug.log'  
 Usefull messages (for instance to track syntax error in testcases definition) should be with level WARNING or ERROR.
 Program is aborted for level ERROR.
 
-Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `--debug` 
+Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `--debug`
 
 ### sample
 ~~~
@@ -390,7 +418,7 @@ Log level is 'INFO' by default but it can be adjusted to DEBUG using optional `-
 
 Lists of possible feedback values :
 ~~~
-[playbook_path]     : Path to playbook top directory 
+[playbook_path]     : Path to playbook top directory
 [playbook]          : playbook name
 [run]               : run id
 [testcase_id]	    : id of testcase
@@ -405,14 +433,14 @@ Lists of possible feedback values :
 
 ### Files samples
 
-### conf/macros.txt 
+### conf/macros.txt
 
 This is a sample macro file, in `playbooks/PLAYBOOK_NAME/conf/macros.txt`  
 Note that a variable 'server' is used in the macro, it is emcompassed with double-dollars '$$'.  
 This is made sso $$server$$ is translated to $server$ in the scenario during macro expansion, then variable 'server' (in conf/variables.xml) will be used to replace $server$ in the scenario.  
 ###### Example of a macro call
 
-Use & to reference a macro. 
+Use & to reference a macro.
 `&tcp_connection_check(H1B1,1,H1B2,1,9000)`  
 
 ###### Definition:
@@ -486,7 +514,7 @@ $server$:$server_conn$ close
 end
 ~~~
 
-### conf/variables.yml 
+### conf/variables.yml
 
 ```yamel
 ---

@@ -12,6 +12,7 @@ from netcontrol.ssh.ssh import Ssh
 from netcontrol.vyos.vyos import Vyos
 from netcontrol.fpoc.fpoc import Fpoc
 from netcontrol.fortigate.fortigate import Fortigate
+from netcontrol.fortiswitch.fortiswitch import Fortiswitch
 
 class Agent(object):
     """
@@ -26,7 +27,7 @@ class Agent(object):
         # no call to __init__ from sons (no super calls)
         # we are only interested in the methods
         # attributes are the sons ones
-        
+
     def process_generic(self, line=""):
         """
         Generic processing done for any kind of agents
@@ -47,7 +48,7 @@ class Agent(object):
             log.error("Undefined run")
             raise SystemExit
         log.debug("Our attributs : path={} playbook={} run={}".format(self.path, self.playbook, self.run))
-        
+
         # Generic commands : 'mark'
         match = re.search("(?:(\s|\t)*[A-Za-z0-9\-_]+:\d+(\s|\t)+)(?P<command>[A-Za-z]+)",line)
 
@@ -105,7 +106,7 @@ class Agent(object):
         * type='report' : returns path and filename for a report in testcase
         """
         log.info("Enter with type={}".format(type))
-            
+
         file_path = self.path+"/"+self.playbook+"/runs/"+str(self.run)+"/"
 
         if type == 'trace':
@@ -117,7 +118,7 @@ class Agent(object):
         else:
            log.error("unknown type={}".format(type))
            raise SystemExit
-           
+
         filename = file_path+file_name
         log.debug("type={} filename={}".format(type, filename))
         return(filename)
@@ -178,7 +179,7 @@ class Agent(object):
         # Write report file
         filename = self.get_filename(type='report')
         log.debug("Writing report filename={}".format(filename))
- 
+
         f = open (filename, "w")
         f.write(json.dumps(self.report, indent=4))
         f.close()
@@ -203,11 +204,8 @@ class Agent(object):
         password = self.agent['password']
         ssh_key_file = self.agent['ssh_key_file']
         log.debug("ip={} port={} login={} password={} ssh_key_file={}".format(ip, port, login, password, ssh_key_file))
-
         success = True
-
         if not self.dryrun:
-
             if type == 'lxc':
                 self._ssh = Ssh(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
             elif type == 'vyos':
@@ -216,13 +214,13 @@ class Agent(object):
                 self._ssh = Fpoc(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
             elif type == 'fortigate':
                 self._ssh = Fortigate(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
+            elif type == 'fortiswitch':
+                self._ssh = Fortiswitch(ip=ip, port=port, user=login, password=password, private_key_file=ssh_key_file, debug=self.debug)
             else:
                 log.error("unknown type")
                 raise SystemExit
-
             tracefile_name = self.get_filename(type='trace')
             self._ssh.trace_open(filename=tracefile_name)
-
             try:
                 success = self._ssh.connect()
                 self._connected = True
@@ -232,7 +230,6 @@ class Agent(object):
                 success = False
         else:
             log.debug("dryrun mode")
-
         return success
 
     def close(self):
@@ -244,7 +241,3 @@ class Agent(object):
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_checkitbaby.py\n")
-
-     
-
-

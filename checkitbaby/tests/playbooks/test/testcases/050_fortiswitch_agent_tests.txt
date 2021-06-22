@@ -1,0 +1,21 @@
+# Get switch port status
+
+# Record port state in report file without special requirement
+FSW-17:1 check [get_port1_status] port status port1
+FSW-17:1 check [get_port2_status] port status port2
+
+# Bring ports down
+FSW-17:1 port down port1
+FSW-17:1 port down port2
+
+# Check ports status are down
+FSW-17:1 check [port1_status_down] port port1 status has state=down
+FSW-17:1 check [port2_status_down] port port2 status has state=down
+
+# Bring ports up
+FSW-17:1 port up port1
+FSW-17:1 port up port2
+
+# Check ports status are up
+FSW-17:1 check [port1_status_up] port port1 status has state=up
+FSW-17:1 check [port2_status_up] port port2 status has state=up

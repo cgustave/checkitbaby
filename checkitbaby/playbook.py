@@ -5,7 +5,7 @@ Created on Feb 12, 2020
 """
 
 import logging as log
-import os 
+import os
 import glob
 import re
 import json
@@ -33,16 +33,16 @@ class Playbook(object):
     Agents are defined in the playbook dir, inside 'conf'
       ex : /fortipoc/playbooks/advpn/conf/agents.json
 
-    Variables : 
+    Variables :
     List of variables defined in a json format which
     could be used withing testcases scenario (called with $name) :
       ex : { 'var1' : 'port1', 'var2' : 'internal' }}
-    Variables can be used in scenario files, between $ like : $myvar$ 
+    Variables can be used in scenario files, between $ like : $myvar$
 
     Variables can also be  assigned within the scenario using statement 'set'.
     In this case, pre-defined functions can be used for assignment :
-   
-    - random_string(length) : random string generation 
+
+    - random_string(length) : random string generation
       ex : set message = random_string(4)
 
     Macros :
@@ -89,7 +89,7 @@ class Playbook(object):
         $server$:$server_conn$ close
 		end
 
-    Runs : 
+    Runs :
     A 'run' is a directory containing all traces from the last running playbook
     testcases. To keep track of several 'runs', directory has sub 'run'
     directories numbered 001,002,003,004 so they can be sorted alphatically.
@@ -137,13 +137,13 @@ class Playbook(object):
         self.path = path
         self.run = run                # Run id
         self.feedback = feedback
-        self.macros = {}              
-        self.variables = {}           
+        self.macros = {}
+        self.variables = {}
         self.playlists = {}           # Dictionary of our playlists (from conf/)
         self.testcases = []           # List of testcase objects
         self.testcases_agents = []    # List of agents used in the testcases
         self.testcases_list = []      # List of registered testcase id
-        self.nb_testcases = 0  
+        self.nb_testcases = 0
         self.agents = {}              # Dictionnary of agents loaded from json file conf/agents.json
         self.agents_connections = {}  # SSH connection handle to agents key is agent name
                                       # ex : {'lxc1' : { '1' : <agent_object>, '2' : <agent_object>} }
@@ -153,7 +153,7 @@ class Playbook(object):
 
         # Private attributs
         self._FB = None               # Feedback file object, to be instanciated only if feedback path was given
-    
+
     def register(self):
         """
         Load config files and load the playbook testcases references
@@ -176,7 +176,7 @@ class Playbook(object):
         for filename in sorted(os.listdir(self.path+"/"+self.name+"/testcases")):
             nb=nb+1
             log.debug("listdir : nb={} filename={}".format(nb, filename))
-            
+
             # Extract testcase id and name from filename
             match = re.search("^(?P<id>\d+)(?:_)(?P<name>\S+)(?:.txt)",filename)
             if match:
@@ -184,7 +184,7 @@ class Playbook(object):
                 name = match.group('name')
                 log.debug("id={} name={}".format(id,name))
                 self._register_testcase(id=id, name=name, filename=filename)
-                
+
             else:
                 log.debug("no match")
 
@@ -226,10 +226,10 @@ class Playbook(object):
 
         # Forces another call to register the used agent
         # This needs to be done as some testcase may have been disabled since
-        # our initial load 
+        # our initial load
         self._register_used_agents
 
-        result = True 
+        result = True
         for ua in self.testcases_agents:
             if ua not in self.agents:
                 log.debug("Agent {} is missing to execute workbook".format(ua))
@@ -285,7 +285,7 @@ class Playbook(object):
         if not id:
             self.prepare_feedback()
 
-        index = 0 
+        index = 0
         for tc in self.testcases:
             index = index + 1
             if id:
@@ -322,12 +322,12 @@ class Playbook(object):
             print("Playlist id={} is unknown. Aborting".format(id))
             log.error("Playlist id={} is unknown".format(id))
             raise SystemExit
-          
+
         log.debug("playlist {} = {}".format(id,self.playlists[id]))
 
         nb_testcases = len(self.playlists[id]['list'])
 
-        index = 0 
+        index = 0
         for tc_id in self.playlists[id]['list']:
             index = index + 1
             log.debug("index={} processing tc_id={}".format(index, tc_id))
@@ -360,7 +360,7 @@ class Playbook(object):
           - call agent specific processing
         """
         log.info("Enter with Testcase id={} name={} (dryrun={})".format(testcase.id, testcase.name, self.dryrun))
-        print("* Starting {} - {}".format(testcase.id, testcase.name)) 
+        print("* Starting {} - {}".format(testcase.id, testcase.name))
 
         # remove old run logfiles and create run filestructure if needed
         self._create_testcase_run_file_structure(testcase_id=testcase.id)
@@ -411,21 +411,21 @@ class Playbook(object):
                 log.debug("Agent connection check ok : agent_name={} dict={}".format(agent_name, self.agents_connections[agent_name].keys()))
             else:
                 log.error("ERROR: Agent connection {}:{} does not exists".format(agent_name, agent_conn))
-                raise SystemExit 
+                raise SystemExit
 
             # Proceed with Agent specific command line
             # feed agent attributs
             self.agents_connections[agent_name][agent_conn].path = self.path
             self.agents_connections[agent_name][agent_conn].playbook = self.name
             self.agents_connections[agent_name][agent_conn].run = self.run
-            self.agents_connections[agent_name][agent_conn].testcase = testcase.id 
+            self.agents_connections[agent_name][agent_conn].testcase = testcase.id
 
-            # Tell agent who it is and for which testcase it has been created 
+            # Tell agent who it is and for which testcase it has been created
             self.agents_connections[agent_name][agent_conn].agent = self.agents[agent_name]
 
             # Provide report for update
-            self.agents_connections[agent_name][agent_conn].report = self.report 
-   
+            self.agents_connections[agent_name][agent_conn].report = self.report
+
             # Run generic methods (in agent.py) and specific ones
             if not self.dryrun:
                 translated_line = self.agents_connections[agent_name][agent_conn].process_generic(line=line)
@@ -476,20 +476,20 @@ class Playbook(object):
 
     def _create_agent_conn(self, name="", type="", conn=None):
         """
-        Creates a new agent object in our agent list 
+        Creates a new agent object in our agent list
         Returns True if connection creation was required
-        Return False if connection was already existing 
+        Return False if connection was already existing
         """
         log.info("Enter with name={} type={} conn={}".format(name, type, conn))
 
         result = False
 
         # step 1: If agent is not in our dictionary, create it
-          
+
         if not name in self.agents_connections:
             log.debug("Create a new agent={} in our agents_connections dictionnary".format(name))
             self.agents_connections[name] = {}
-        else: 
+        else:
             log.debug("agent={} is already in our list".format(name))
 
         # step 2 : If agent object is not created for this connection id, create it
@@ -506,6 +506,8 @@ class Playbook(object):
                 self.agents_connections[name][conn] = Fortipoc_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             elif type == "fortigate":
                 self.agents_connections[name][conn] = Fortigate_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
+            elif type == "fortiswitch":
+                self.agents_connections[name][conn] = Fortiswitch_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug))
             else:
                 print ("Error: undefined type for agent {}".format(type))
                 raise SystemExit
@@ -533,7 +535,7 @@ class Playbook(object):
                     if (line[0] == "#"):
                         continue
                     log.debug("read line={}".format(line))
-                    
+
                     match_macro_prototype = re.search("^(?:macro\s+)(?P<name>[A-Za-z0-9\-_]+)(?:\s*)\((?P<params>\S+)\)\:",line)
                     if match_macro_prototype and not in_macro:
                         in_macro = True
@@ -581,7 +583,7 @@ class Playbook(object):
 
         dir = self.path+"/"+self.name+"/conf"
         file = self.path+"/"+self.name+"/conf/"+name+".yml"
-        
+
         # checks conf dir and yml file exists
         if not (os.path.exists(dir) and os.path.isdir(dir)):
             print ("conf dir {} does not exist or is not a directory\n".format(dir))
@@ -598,7 +600,7 @@ class Playbook(object):
                     self.variables =yaml.safe_load(V.read())
                 elif name=="agents":
                     self.agents =  yaml.safe_load(V.read())
-            V.close() 
+            V.close()
 
     def _get_agent_from_tc_line(self, id=None, line=""):
         """
@@ -626,7 +628,7 @@ class Playbook(object):
             log.debug("Found id={} agent={} conn={}".format(id, agent_name, agent_conn))
 
             # Get agent type from agent file
-            agent_type = self._get_agent_type(name=agent_name) 
+            agent_type = self._get_agent_type(name=agent_name)
             log.debug("Found corresponding type={}".format(agent_type))
 
         elif match_message:
@@ -694,7 +696,7 @@ class Playbook(object):
         """
         Delete any old run files and create the required file structure for a run
         ex : playbook_path/PLAYBOOK_NAME/runs/ID
-        ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases 
+        ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases
         ex : playbook_path/PLAYBOOK_NAME/runs/ID/testcases/TESTCASE_ID
 
         Requirement: run id, playbook name
@@ -716,7 +718,7 @@ class Playbook(object):
         if not self.run:
             log.error("run id is required")
             raise SystemExit
-        
+
         path = self.path+"/"+self.name+"/runs/"+str(self.run)+"/testcases/"+str(testcase_id)
         log.debug("Create if needed path={}".format(path))
         p = Path(path)

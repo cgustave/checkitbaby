@@ -5,7 +5,6 @@ Created on May 13, 2020
 """
 import logging as log
 import os
-import sys
 import datetime
 
 class Feedback(object):

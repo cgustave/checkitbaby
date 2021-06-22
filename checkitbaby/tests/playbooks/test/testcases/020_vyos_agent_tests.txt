@@ -1,5 +1,4 @@
 R1-B1:1 traffic-policy WAN delay 90 loss 2
 R2-B1:1 traffic-policy WAN delay 12 loss 1
-R3-B1:1 traffic-policy WAN delay 13
-R3-B1:1 traffic-policy WAN loss 3
-
+R1-B2:1 traffic-policy WAN delay 13
+R2-B2:1 traffic-policy WAN loss 3
