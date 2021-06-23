@@ -29,8 +29,6 @@ class Fortigate_agent(Agent):
               datefmt='%Y%m%d:%H:%M:%S',
               filename='debug.log',
               level=log.NOTSET)
-        # Set debug level first
-
         if debug:
             self.debug = True
             log.basicConfig(level='DEBUG')
@@ -62,6 +60,7 @@ class Fortigate_agent(Agent):
         """
         Desctructor to close opened connection to agent when exiting
         """
+        pass
         #if self._ssh:
         #    self._ssh.close()
 
@@ -72,13 +71,11 @@ class Fortigate_agent(Agent):
         """
         log.info("Enter with line={}".format(line))
         match = re.search("(?:(\s|\t)*[A-Za-z0-9\-_]+:\d+(\s|\t)+)(?P<command>[A-Za-z-]+)",line)
-
         if match:
             command = match.group('command')
             log.debug("Matched with command={}".format(command))
         else:
             log.debug("No command has matched")
-
         if command == 'get':
             result = self.cmd_get(line)
         elif command == 'check':
@@ -88,28 +85,6 @@ class Fortigate_agent(Agent):
         else:
             log.warning("command {} is unknown".format(command))
         return result
-
-    def cmd_flush(self, line=""):
-        """
-        Process flush command:
-          - flush ike gateway
-        """
-        log.info("Enter with line={}".format(line))
-        match_command = re.search("flush\s+(?P<command>\w+)\s+(?P<subcommand>\w+)", line)
-        if match_command:
-            command = match_command.group('command')
-            subcommand = match_command.group('subcommand')
-            log.debug("Matched with command={} subcommand={}".format(command,subcommand))
-            if command == 'ike' and subcommand == 'gateway':
-                log.debug("vpn ike gateway flush requested")
-                self._connect_if_needed()
-                self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
-            else:
-                log.error("unknown combination of command={} subcommand={}".format(command, subcommand))
-                raise SystemExit
-        else:
-            log.debug("No command has matched")
-
 
     def cmd_get(self, line=""):
         """
@@ -132,14 +107,12 @@ class Fortigate_agent(Agent):
             log.error("unknown get command from line={}".format(line))
             raise SystemExit
 
-
     def cmd_check(self, line=""):
         """
         Process check commands
         Check commands distribution to specific handling
         """
         log.info("Enter with line={}".format(line))
-
         match_command = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?P<command>\w+)",line)
         if match_command:
           name =  match_command.group('name')
@@ -164,6 +137,27 @@ class Fortigate_agent(Agent):
            raise SystemExit
         return result
 
+    def cmd_flush(self, line=""):
+        """
+        Process flush command:
+          - flush ike gateway
+        """
+        log.info("Enter with line={}".format(line))
+        match_command = re.search("flush\s+(?P<command>\w+)\s+(?P<subcommand>\w+)", line)
+        if match_command:
+            command = match_command.group('command')
+            subcommand = match_command.group('subcommand')
+            log.debug("Matched with command={} subcommand={}".format(command,subcommand))
+            if command == 'ike' and subcommand == 'gateway':
+                log.debug("vpn ike gateway flush requested")
+                self._connect_if_needed()
+                self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
+            else:
+                log.error("unknown combination of command={} subcommand={}".format(command, subcommand))
+                raise SystemExit
+        else:
+            log.debug("No command has matched")
+
     def _cmd_check_route(self, line=''):
         """
         Check command route distribution
@@ -179,6 +173,33 @@ class Fortigate_agent(Agent):
                 log.error("Unknown check route command")
                 raise SystemExit
         return result
+
+    def _vdom_processing(self, line):
+        """
+        Do what is needed if query is specific for a vdom or global section
+        We are looking for pattern \svdom=VDOM\s to enter vdom
+        We are looking for \svdom=global\s to enter global section
+        the line is then returned without its vdom=XXXX keyword for further
+        processing
+        """
+        log.info("Enter with line={}".format(line))
+        # Match global
+        match_global = re.search("(\svdom=global\s)|(\sglobal\s)", line)
+        match_vdom =  re.search("\svdom=(?P<vd>\S+)\s", line)
+        found = False
+        if match_global:
+            self._cmd_enter_global()
+            found = True
+        elif match_vdom:
+            vd = match_vdom.group('vd')
+            self._cmd_enter_vdom(vdom=vd)
+            found = True
+        # remove vdom= from line is needed for further processing
+        if found:
+            line = re.sub("vdom=\S+\s", '', line)
+            line = re.sub("\sglobal", '' , line)
+            log.debug("stripped line={}".format(line))
+        return line
 
     def _cmd_enter_vdom(self, vdom=""):
         """
@@ -206,38 +227,6 @@ class Fortigate_agent(Agent):
             log.error("Could not enter global section")
             raise SystemExit
 
-    def _vdom_processing(self, line):
-        """
-        Do what is needed if query is specific for a vdom or global section
-        We are looking for pattern \svdom=VDOM\s to enter vdom
-        We are looking for \svdom=global\s to enter global section
-        the line is then returned without its vdom=XXXX keyword for further
-        processing
-        """
-        log.info("Enter with line={}".format(line))
-
-        # Match global
-        match_global = re.search("(\svdom=global\s)|(\sglobal\s)", line)
-        match_vdom =  re.search("\svdom=(?P<vd>\S+)\s", line)
-
-        found = False
-        if match_global:
-            self._cmd_enter_global()
-            found = True
-
-        elif match_vdom:
-            vd = match_vdom.group('vd')
-            self._cmd_enter_vdom(vdom=vd)
-            found = True
-
-        # remove vdom= from line is needed for further processing
-        if found:
-            line = re.sub("vdom=\S+\s", '', line)
-            line = re.sub("\sglobal", '' , line)
-            log.debug("stripped line={}".format(line))
-
-        return line
-
     def _cmd_check_ike(self, name="", line=""):
         """
         ike status:
@@ -253,10 +242,8 @@ class Fortigate_agent(Agent):
         result = self._ssh.get_ike_and_ipsec_sa_number()
         if result:
             found_flag = True
-
             # Without any further requirements, result is pass
             feedback = found_flag
-
             # Processing further requirements (has ...)
             match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
             if match_has:
@@ -282,7 +269,6 @@ class Fortigate_agent(Agent):
                         else:
                             log.error("unrecognized requirement")
                             raise SystemExit
-
                         feedback = feedback and rfdb
             self.add_report_entry(check=name, result=feedback)
             return found_flag
@@ -313,10 +299,8 @@ class Fortigate_agent(Agent):
             if result['total'] >= 1:
                 log.debug("At least 1 bgp route was found (total={})".format(result['total']))
                 found_flag = True
-
         # Without any further requirements, result is pass
         feedback = found_flag
-
         # Processing further requirements (has ...)
         match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
@@ -355,11 +339,9 @@ class Fortigate_agent(Agent):
         else:
             log.error("could not recognize ping command syntax line={}".format(line))
             raise SystemExit
-
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
             self.connect(type='fortigate')
-
         reference = self.random_string(length=8)
         if not self.dryrun:
             self._ssh.trace_mark(reference)
@@ -412,7 +394,6 @@ class Fortigate_agent(Agent):
                 else:
                    log.error("Could not connect to FortiGate {} but continue scenario ".format(self.name))
 
-
     def _cmd_check_status(self, name="", line=""):
         """
         Check on fortigate get system status command
@@ -430,13 +411,10 @@ class Fortigate_agent(Agent):
             log.debug("found license={} version={}".format(license, version))
         else:
             log.debug("dry-run")
-
         if result:
             found_flag = True
-
         # Without any further requirements, result is pass
         feedback = found_flag
-
         # Processing further requirements (has ...)
         match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
@@ -466,15 +444,11 @@ class Fortigate_agent(Agent):
           ex : F1B2:1 check [ssh_session] session vdom=customer filter dport=22
         """
         log.info("Enter with name={} line={}".format(name, line))
-
         found_flag = False
-
         # Prepare session filter
         session_filter = {}
-
         # vdom processing if needed
         line = self._vdom_processing(line=line)
-
         # remove requirements from line (after 'has ...')
         line_no_requirement = line
         line_no_requirement = line.split('has')[0]
@@ -491,16 +465,12 @@ class Fortigate_agent(Agent):
                     fvalue = match_filter.group('fvalue')
                     log.debug("Adding filter : fname={} fvalue={}".format(fname, fvalue))
                     session_filter[fname]=fvalue
-
         log.debug("Prepared session_filter={}".format(session_filter))
-
         # Connect to agent if not already connected
         self._connect_if_needed()
-
         # Query for session
         result = self._ssh.get_session(filter=session_filter)
         log.debug("Found result={}".format(result))
-
         # See if at least one session was found
         if result:
             if result['total'] == '1':
@@ -512,10 +482,8 @@ class Fortigate_agent(Agent):
             else:
                 log.warning("Multiple sessions found num={}".format(result['total']))
                 found_flag = True
-
         # Without any further requirements, result is pass
         feedback = found_flag
-
         # Processing further requirements (has ...)
         match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
         if match_has:
@@ -530,7 +498,6 @@ class Fortigate_agent(Agent):
                     log.debug("Checking requirement {}={}".format(rname, rvalue))
                     rfdb = self._check_session_requirement(rname=rname, rvalue=rvalue, result=result)
                     feedback = feedback and rfdb
-
         self.add_report_entry(check=name, result=feedback)
         return feedback
 
@@ -550,15 +517,11 @@ class Fortigate_agent(Agent):
         Returns : True if requirements are met, false otherwise
         """
         log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
-
         fb = True  # by default, requirement is met
-
         # Dealing with state
         log.debug("result={}".format(result))
-
         if not 'state' in result:
             result['state'] = []
-
         if rname == 'state' :
             log.debug("Checking state '{}' is set on the session".format(rvalue))
             if result['state'].count(rvalue) > 0:
@@ -572,7 +535,6 @@ class Fortigate_agent(Agent):
         else:
             log.error("unknown session requirement {}={}".format(rname, rvalue))
             raise SystemExit
-
         log.debug("requirements verdict : {}".format(fb))
         return fb
 
@@ -583,10 +545,8 @@ class Fortigate_agent(Agent):
         """
         log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
         fb = True  # by default, requirement is met
-
         if not 'license' in result:
             result['license'] = {}
-
         if rname == 'license':
             log.debug("Checking license requirement")
             if str(result['license']) == str(rvalue):
@@ -594,7 +554,6 @@ class Fortigate_agent(Agent):
             else:
                 log.debug("License requirement is not met")
                 fb = False
-
         if rname == 'version':
             log.debug("Checking version requirement")
             if str(result['version']) == str(rvalue):
@@ -609,21 +568,15 @@ class Fortigate_agent(Agent):
         Validates bgp routes requirements, that is verifying if the 'has ...' part
         """
         log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
-
         fb = True  # by default, requirement is met
         if not 'subnet' in result:
             result['subnet'] = []
-
         if not 'nexthop' in result:
             result['nexthop'] = []
-
         if not 'interface' in result:
             result['interface'] = []
-
         if rname in ('total', 'recursive', 'subnet','nexthop','interface'):
-
             log.debug("requirement {}={} is known".format(rname, rvalue))
-
             if rname == 'total' :
                 log.debug("Checking exact number of subnets : asked={} got={}".format(rvalue, result['total']))
                 if str(result['total']) == str(rvalue):
@@ -644,11 +597,9 @@ class Fortigate_agent(Agent):
             else :
                 log.debug("rname={} found : requirement is not met".format(rname))
                 fb = False
-
         else:
            log.error("unknown bgp requirement {}={} is unknown".format(rname, rvalue))
            raise SystemExit
-
         log.debug("requirements verdict : {}".format(fb))
         return fb
 
@@ -683,34 +634,33 @@ class Fortigate_agent(Agent):
             - vdom supported :
                 ex : F1B2:1 check [sdwan_1_member1_alive] sdwan vdom=customer service 1 member 1 has status=alive
 	    """
-
         log.info("Enter with name={} line={}".format(name, line))
-
+        found_flag = False
         # vdom processing if needed
         line = self._vdom_processing(line=line)
-
+        version = '6.4'
+        if re.search('version=6.2', line):
+            line = re.sub("version=6.2\s", '', line)
+            version = '6.2'
         # remove requirements from line (after 'has ...')
         line_no_requirement = line
         line_no_requirement = line.split('has')[0]
         log.debug("line_no_requirement={}".format(line_no_requirement))
-
         match_command = re.search("sdwan\s+service\s(?P<rule>\d+)\s+member\s+(?P<seq>\d+)", line_no_requirement)
         if match_command:
             rule = match_command.group('rule')
             seq = match_command.group('seq')
             log.debug("matched sdwan service rule={} member seq={}".format(rule, seq))
             self._connect_if_needed()
-
             # Query SDWAN service
-            result = self._ssh.get_sdwan_service(service=rule)
+
+            result = self._ssh.get_sdwan_service(service=rule, version=version)
             if result:
                 if len(result['members']) >= 1:
                     log.debug("At least 1 member was found")
                     found_flag = True
-
             # Without any further requirements, result is pass
             feedback = found_flag
-
             # Processing further requirements (has ...)
             match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
             if match_has:
@@ -730,14 +680,16 @@ class Fortigate_agent(Agent):
             self.add_report_entry(check=name, result=feedback)
             return found_flag
 
-
     def _check_sdwan_service_requirement(self, seq='', result={}, rname='', rvalue=''):
         """
         Validates all requirements for sdwan service
         """
         log.info("Enter with seq={} rname={} rvalue={} result={}".format(seq, rname, rvalue, result))
+        # if command failed, no members could be found => fail
+        if result['members'] == {}:
+            log.warning("could not retrieve sdwan members, return Fail")
+            return False
         fb = True  # by default, requirement is met
-
         # Checking member is preferred
         # Extract seq from 1st member and see if its our
         if rname == 'preferred':
@@ -753,14 +705,12 @@ class Fortigate_agent(Agent):
             else:
                 log.error("No members found in 1st position")
                 fb = False
-
         elif rname in ('status','sla'):
             log.debug("Accepted requirement rname={} checking member={} detail={}".format(rname, seq, result['members'][seq]))
             fb = self.check_generic_requirement(result=result['members'][seq], rname=rname, rvalue=rvalue)
         else:
             log.error("unknown requirement")
             raise SystemExit
-
         log.debug("requirements verdict : {}".format(fb))
         return fb
 

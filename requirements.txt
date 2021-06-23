@@ -1,4 +1,4 @@
 paramiko
-netcontrol
+netcontrol>=1.62
 wheel
 pyyaml
