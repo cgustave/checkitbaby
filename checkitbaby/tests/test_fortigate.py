@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Created on June 22, 2021
-
 @author: cgustave
+
+Fortgate Agent unittest to be run agains test FortiPoC "checkitbaby_tests"
+~/github/python/packages/checkitbaby (master *)$ source venv/bin/activate
+(venv) ~/github/python/packages/checkitbaby (master *)$ cd checkitbaby/
+(venv) ~/github/python/packages/checkitbaby/checkitbaby (master *)$ python tests/test_fortigate.py
 '''
 import logging as log
 import unittest
@@ -79,7 +83,20 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session filter dport=22 has state=local\n")
         self.assertTrue(result)
 
+    @unittest.skip
+    def test_ping_ok(self):
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping 192.168.0.254\n")
+        self.assertTrue(result)
 
+    @unittest.skip
+    def test_ping_source_ok(self):
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254\n")
+        self.assertTrue(result)
+
+    @unittest.skip
+    def test_ping_nok(self):
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 169.255.1.2\n")
+        self.assertFalse(result)
 
 
 if __name__ == '__main__':

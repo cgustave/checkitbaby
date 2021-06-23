@@ -192,6 +192,51 @@ class Agent(object):
         s = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
         return s
 
+    def search_pattern_tracefile(self, pattern="", mark=""):
+        """
+        Search for a pattern in the tracefile
+        Returns a dictionary :
+            'result' : true|false
+            'line'   : matched line
+        If a mark is provided, first search for the mark, then look from the
+        pattern starting from there.
+        """
+        log.info("Enter with pattern={} mark={}".format(pattern, mark))
+        result = False
+        line = ""
+        fname = self.get_filename(type='trace')
+        log.debug("tracefile={}".format(fname))
+        try :
+            fh = open(fname)
+        except:
+            log.error("Tracefile {} can't be opened".format(fname))
+            raise SystemExit
+        if mark != "":
+            log.debug("Need to search mark={}".format(mark))
+            flag = True
+        else:
+            flag = False
+        # Need to first look for the mark
+        # ex : ### 200221-19:13:13 server ready ###
+        # ex : ### 200222-19:15:43 9E9T6EAN ###
+        for line in fh:
+            line = line.strip()
+            log.debug("line={}".format(line))
+            if flag:
+                match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
+                if match:
+                    log.debug("Found mark={}".format(mark))
+                    flag = False
+            else:
+                match2 = re.search(pattern, line)
+                if match2:
+                    log.debug("Found pattern={}".format(pattern))
+                    result = True
+                    break
+        fh.close()
+        log.debug("result={}".format(result))
+        return {"result": result, "line": line}
+
     def connect(self, type=''):
         """
         Connect to agent without sending any command

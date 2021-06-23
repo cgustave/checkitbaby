@@ -156,6 +156,8 @@ class Fortigate_agent(Agent):
               result = self._cmd_check_sdwan(name=name, line=line)
           elif command == 'ike':
               result = self._cmd_check_ike(name=name, line=line)
+          elif command == 'ping':
+              result = self._cmd_check_ping(name=name, line=line)
 
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
@@ -294,7 +296,6 @@ class Fortigate_agent(Agent):
 
         """
         log.info("Enter with name={} line={}".format(name, line))
-
         found_flag = False
         self._connect_if_needed()
 
@@ -332,6 +333,65 @@ class Fortigate_agent(Agent):
 
         return found_flag
 
+    def _cmd_check_ping(self, name='', line=''):
+        """
+        ping check accepted format
+        ex : fgt1:1 check [ping_test] ping 192.168.0.254
+        ex : fgt1:1 check [ping_test] ping vdom=root 192.168.0.254  (vdom option after ping word)
+        ex : fgt1:1 check [ping_test] ping source=192.168.0.1 192.168.0.254 (source option)
+        Note : transmited/received/drop packets added in report get={} section
+        """
+        log.info("Enter with name={} line={}".format(name, line))
+        line = self._vdom_processing(line=line)
+        result = False
+        self._connect_if_needed()
+        match = re.search('\s+ping\s+(?:source=[A-Za-z0-9_\.-]+)?\s?(?P<host>\S+)', line)
+        if match:
+            host = match.group('host')
+            log.debug("name={} : found host={}".format(name,host))
+        else:
+            log.error("could not recognize ping command syntax line={}".format(line))
+            raise SystemExit
+
+        if not self._connected:
+            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
+            self.connect(type='fortigate')
+
+        reference = self.random_string(length=8)
+        if not self.dryrun:
+            self._ssh.trace_mark(reference)
+            maxround = self._ssh.ssh.maxround
+            self._ssh.ssh.maxround = 90
+            cmd_list = ["execute ping-options reset\n","execute ping-options adaptive-ping enable\n"]
+            match_source = re.search ('source=(?P<source>[A-Za-z0-9_\.-]+)', line)
+            if match_source:
+                source = match_source.group('source')
+                log.debug("source={}".format(source))
+                cmd_list.append("execute ping-options source {}\n".format(source))
+            for data in cmd_list:
+                log.debug("data={}".format(data))
+                self._ssh.ssh.shell_send([data])
+            data = "execute ping "+host+"\n"
+            self._ssh.ssh.shell_send([data])
+            self._ssh.ssh.maxround = maxround
+            sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
+            log.debug("sp={}".format(sp))
+            if sp['result'] == True:
+                log.debug("Found summary_line={}".format(sp['line']))
+                match = re.search('(?P<transmit>\d+)\spackets\stransmitted,\s(?P<receive>\d+)\spackets\sreceived,\s(?P<drop>\d+)', sp['line'])
+                if match:
+                    transmit = match.group('transmit')
+                    receive = match.group('receive')
+                    drop = match.group('drop')
+                    log.debug("transmit={} receive={} drop={}".format(transmit, receive, drop))
+                    self.add_report_entry(get=name, result={'transmit': transmit, 'receive': receive, 'drop': drop})
+                    if drop == '0':
+                        log.debug("ping test passed (no drop)")
+                        result = True
+                else:
+                    log.warning("Can't extract ping result")
+        return result
+
     def _connect_if_needed(self, stop_on_error=True):
         """
         Connects to fortigate if not already connected
@@ -342,7 +402,6 @@ class Fortigate_agent(Agent):
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
             success = self.connect(type='fortigate')
             log.debug("connection success={}".format(success))
-
             if not success:
                 if stop_on_error:
                    log.error("Could not connect to FortiGate {} aborting scenario ".format(self.name))

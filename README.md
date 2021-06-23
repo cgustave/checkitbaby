@@ -280,6 +280,20 @@ Some examples :
 - to check SDWAN member is alive in SDWAN Rule 1 on vdom 'customer':  
   `check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive`
 
+###### Ping 
+Ping check from the the fortigate itself.  
+Send 5 adaptive pings, test pass if no pings are dropped.  
+Possible options: vdom=_vdom_name_ source=_source_ip_  
+Packets transmited, received and dropped are added in the report.  
+Examples:  
+- no vdom, no options:  
+	`FGT-B1-1:1 check [ping_test] ping 192.168.0.254`
+
+- specific vdom:  
+	`FGT-B1-1:1 check [ping_test] ping vdom=root 192.168.0.254`
+
+- using a specific source-ip address:  
+	`FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254` 
 
 
 ###### Sessions

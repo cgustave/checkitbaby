@@ -11,12 +11,12 @@ class Lxc_agent(Agent):
     """
     LXC agent
     """
-    
+
     def __init__(self, name='', conn=0, dryrun=False, debug=False):
         """
         Constructor
         """
-        
+
         # create logger
         log.basicConfig(
               format='%(asctime)s,%(msecs)3.3d %(levelname)-8s[%(module)-\
@@ -36,11 +36,11 @@ class Lxc_agent(Agent):
         log.info("Constructor with name={} conn={} dryrun={} debug={}".format(name, conn, dryrun, debug))
 
         # Attributs set in init
-        self.name = name 
+        self.name = name
         self.conn = conn
-        self.dryrun = dryrun 
+        self.dryrun = dryrun
 
-        # Attributs to be set before processing 
+        # Attributs to be set before processing
         self.path = None
         self.playbook = None
         self.run = None
@@ -49,7 +49,7 @@ class Lxc_agent(Agent):
         self.report = None       # Testcase report (provided from Workbook)
 
         # Private attributs
-        self._connected = False    # ssh connection state with the agent 
+        self._connected = False    # ssh connection state with the agent
         self._ssh = None
 
     def __del__(self):
@@ -87,7 +87,7 @@ class Lxc_agent(Agent):
         elif command == 'send':
             self.cmd_send(line)
         elif command == 'check':
-           self.cmd_check(line) 
+           self.cmd_check(line)
         elif command == 'close':
            self.cmd_close(line)
         elif command == 'ping':
@@ -98,12 +98,12 @@ class Lxc_agent(Agent):
     def cmd_open(self, line):
         """
         Processing for command "open"
-        Opens a server udp or tcp connection 
+        Opens a server udp or tcp connection
         ex : srv-1:1 open tcp 9123
         """
         log.info("Enter with line={}".format(line))
 
-        match = re.search("(?:open(\s|\t)+)(?P<proto>tcp|udp)(?:(\s|\t)+)(?P<port>\d+)",line) 
+        match = re.search("(?:open(\s|\t)+)(?P<proto>tcp|udp)(?:(\s|\t)+)(?P<port>\d+)",line)
         if match:
             proto = match.group('proto')
             port = match.group('port')
@@ -137,7 +137,7 @@ class Lxc_agent(Agent):
         """
         log.info("Enter with line={}".format(line))
 
-        match = re.search("(?:connect(\s|\t)+)(?P<proto>tcp|udp)(?:(\s|\t)+)(?P<ip>\S+)(?:(\s|\t)+)(?P<port>\d+)",line) 
+        match = re.search("(?:connect(\s|\t)+)(?P<proto>tcp|udp)(?:(\s|\t)+)(?P<ip>\S+)(?:(\s|\t)+)(?P<port>\d+)",line)
         if match:
             proto = match.group('proto')
             ip = match.group('ip')
@@ -156,8 +156,8 @@ class Lxc_agent(Agent):
         cmd = "nc "
         if proto=="udp":
             cmd = cmd+" -u"
-      
-        cmd = cmd+" "+ip+" "+port+"\n" 
+
+        cmd = cmd+" "+ip+" "+port+"\n"
         log.debug("sending cmd={}".format(cmd))
         if not self.dryrun:
             self._ssh.channel_send(cmd)
@@ -188,7 +188,7 @@ class Lxc_agent(Agent):
     def cmd_check(self, line):
         """
         Processing for command "check"
-        Ex : clt-1:1 check [check_name] "keyword" 
+        Ex : clt-1:1 check [check_name] "keyword"
         Ex : clt-1:1 check [check_name] "keyword" since "server ready"
         Process local tracefile looking for a pattern
         Optionaly if 'since "mark"' is added, restrict the search in the
@@ -198,7 +198,7 @@ class Lxc_agent(Agent):
         log.info("Enter with line={}".format(line))
         result = False
         mark = ""
-        
+
         match = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+\"(?P<pattern>[A-Za-z0-9_\s-]+)\"", line)
         if match:
             name = match.group('name')
@@ -235,7 +235,7 @@ class Lxc_agent(Agent):
         Processing for command "close"
         """
         log.info("Enter with line={}".format(line))
-        
+
         if self._ssh:
             self._ssh.close()
 
@@ -246,14 +246,14 @@ class Lxc_agent(Agent):
         Results (average delay and loss) are reported in 'ping' report section
         Note : using -A (adaptative by default)
           ex : ping [con_test] 10.0.2.1               (always pass)
-        
+
         Additional test criteria : maxloss and maxdelay:
           ex : ping [con_test] 10.0.2.1 maxloss 50    (pass if loss < 50%)
           ex : ping [con_test] 10.0.2.1 maxdelay 100  (pass if delay < 100)
         Return: true|false depending if pass criteria are matched
         """
         log.info("Enter with line=line")
-        count = 5 
+        count = 5
         loss = 100
         delay = 9999
         result = True
@@ -270,7 +270,7 @@ class Lxc_agent(Agent):
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
             self.connect(type='lxc')
-      
+
         # Random mark for analysis
         reference = self.random_string(length=8)
 
@@ -289,13 +289,13 @@ class Lxc_agent(Agent):
             self._ssh.maxround = 50
             self._ssh.shell_send([data])
             self._ssh.maxround = maxround
-       
+
             # Get loss % : Process result since mark
             sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
             loss_line = sp['line']
             log.debug("Found loss_line={}".format(loss_line))
 
-            # 5 packets transmitted, 5 received, 0% packet loss, time 803ms 
+            # 5 packets transmitted, 5 received, 0% packet loss, time 803ms
             match = re.search("\s(?P<loss>\d+)%\spacket\sloss", loss_line)
             if match:
                 loss = match.group('loss')
@@ -344,63 +344,10 @@ class Lxc_agent(Agent):
             self.add_report_entry(check=name, result=result)
 
         return result
-        
-    def search_pattern_tracefile(self, pattern="", mark=""):
-        """
-        Search for a pattern in the tracefile
-        Returns a dictionary :
-            'result' : true|false
-            'line'   : matched line 
-        If a mark is provided, first search for the mark, then look from the
-        pattern starting from there.
-        """
-        log.info("Enter with pattern={} mark={}".format(pattern, mark))
-        result = False
-        line = ""
 
-        fname = self.get_filename(type='trace')
-        log.debug("tracefile={}".format(fname))
-
-        try :
-            fh = open(fname)
-        except:
-            log.error("Tracefile {} can't be opened".format(fname))
-            raise SystemExit
-
-        if mark != "":
-            log.debug("Need to search mark={}".format(mark))
-            flag = True 
-        else:
-            flag = False
-
-        # Need to first look for the mark
-        # ex : ### 200221-19:13:13 server ready ###
-        # ex : ### 200222-19:15:43 9E9T6EAN ###
-        for line in fh:
-            line = line.strip()
-            log.debug("line={}".format(line))
-            if flag:
-                match = re.search("###\s\d+-\d+:\d+:\d+\s"+mark+"\s###", line)
-                if match:
-                    log.debug("Found mark={}".format(mark))
-                    flag = False
-            else:
-                match2 = re.search(pattern, line)
-                if match2:
-                    log.debug("Found pattern={}".format(pattern))
-                    result = True
-                    break
-
-        fh.close()
-        log.debug("result={}".format(result))
-        return {"result": result, "line": line}
 
     def close(self):
         log.info("Enter")
 
 if __name__ == '__main__': #pragma: no cover
     print("Please run tests/test_checkitbaby.py\n")
-
-     
-
-
