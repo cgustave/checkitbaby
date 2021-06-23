@@ -111,15 +111,13 @@ class Fortigate_agent(Agent):
             log.debug("No command has matched")
 
 
-
     def cmd_get(self, line=""):
         """
         Process get commands
         """
         log.info("Enter with line={}".format(line))
         self._connect_if_needed(stop_on_error=False)
-
-        # get version
+        line = self._vdom_processing(line=line)
         match_version = re.search("get\sstatus", line)
         if match_version:
              if not self.dryrun:
@@ -131,7 +129,7 @@ class Fortigate_agent(Agent):
              else:
                  log.debug("dry-run")
         else:
-            log.error("unknown get command")
+            log.error("unknown get command from line={}".format(line))
             raise SystemExit
 
 
@@ -148,8 +146,8 @@ class Fortigate_agent(Agent):
           command = match_command.group('command')
           if command == 'session':
               result = self._cmd_check_session(name=name, line=line)
-          elif command == 'bgp':
-              result = self._cmd_check_bgp(name=name, line=line)
+          elif command == 'route':
+              result = self._cmd_check_route(line=line)
           elif command == 'status':
               result = self._cmd_check_status(name=name, line=line)
           elif command == 'sdwan':
@@ -158,7 +156,6 @@ class Fortigate_agent(Agent):
               result = self._cmd_check_ike(name=name, line=line)
           elif command == 'ping':
               result = self._cmd_check_ping(name=name, line=line)
-
           else:
               log.error("Unknown check command '{}' for test named {}".format(command, name))
               raise SystemExit
@@ -167,6 +164,21 @@ class Fortigate_agent(Agent):
            raise SystemExit
         return result
 
+    def _cmd_check_route(self, line=''):
+        """
+        Check command route distribution
+        """
+        log.info("Enter with line={}".format(line))
+        match_command = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?:route)\s+(?P<command>\w+)",line)
+        if match_command:
+            name =  match_command.group('name')
+            command = match_command.group('command')
+            if command == 'bgp':
+                result = self._cmd_check_route_bgp(name=name, line=line)
+            else:
+                log.error("Unknown check route command")
+                raise SystemExit
+        return result
 
     def _cmd_enter_vdom(self, vdom=""):
         """
@@ -180,7 +192,6 @@ class Fortigate_agent(Agent):
         if not result:
             log.error("Could not enter vdom {}".format(vdom))
             raise SystemExit
-
 
     def _cmd_enter_global(self):
         """
@@ -206,7 +217,7 @@ class Fortigate_agent(Agent):
         log.info("Enter with line={}".format(line))
 
         # Match global
-        match_global = re.search("\svdom=global\s", line)
+        match_global = re.search("(\svdom=global\s)|(\sglobal\s)", line)
         match_vdom =  re.search("\svdom=(?P<vd>\S+)\s", line)
 
         found = False
@@ -222,10 +233,10 @@ class Fortigate_agent(Agent):
         # remove vdom= from line is needed for further processing
         if found:
             line = re.sub("vdom=\S+\s", '', line)
+            line = re.sub("\sglobal", '' , line)
             log.debug("stripped line={}".format(line))
 
         return line
-
 
     def _cmd_check_ike(self, name="", line=""):
         """
@@ -236,11 +247,9 @@ class Fortigate_agent(Agent):
           FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
         """
         log.info("Enter with name={} line={}".format(name, line))
-
+        line = self._vdom_processing(line=line)
         found_flag = False
         self._connect_if_needed()
-
-
         result = self._ssh.get_ike_and_ipsec_sa_number()
         if result:
             found_flag = True
@@ -266,7 +275,7 @@ class Fortigate_agent(Agent):
                             rfdb = self.check_generic_requirement(rname='created', rvalue=rvalue, result=result['ike'])
                         elif rname == 'ike_established':
                             rfdb = self.check_generic_requirement(rname='established', rvalue=rvalue, result=result['ike'])
-                        elif rname == 'ipsec_create':
+                        elif rname == 'ipsec_created':
                             rfdb = self.check_generic_requirement(rname='created', rvalue=rvalue, result=result['ipsec'])
                         elif rname == 'ipsec_established':
                             rfdb = self.check_generic_requirement(rname='established', rvalue=rvalue, result=result['ike'])
@@ -278,7 +287,7 @@ class Fortigate_agent(Agent):
             self.add_report_entry(check=name, result=feedback)
             return found_flag
 
-    def _cmd_check_bgp(self, name="", line=""):
+    def _cmd_check_route_bgp(self, name="", line=""):
         """
         Checks on bgp routing table (from get router info routing-table bgp)
         - number of bgp routes is 4 :
@@ -292,17 +301,13 @@ class Fortigate_agent(Agent):
         - multiple requirements can be combined
             ... has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
         - allows vdom= statement, should be positioned after bgp keyword
-            ex :
-
         """
         log.info("Enter with name={} line={}".format(name, line))
+        line = self._vdom_processing(line=line)
         found_flag = False
         self._connect_if_needed()
-
-        # Query for bgp routes
         result = self._ssh.get_bgp_routes()
         log.debug("Found result={}".format(result))
-
         # See if at least one bgp route was found
         if result:
             if result['total'] >= 1:
@@ -328,10 +333,8 @@ class Fortigate_agent(Agent):
                     log.debug("Checking requirement {}={}".format(rname, rvalue))
                     rfdb = self._check_bgp_requirement(rname=rname, rvalue=rvalue, result=result)
                     feedback = feedback and rfdb
-
         self.add_report_entry(check=name, result=feedback)
-
-        return found_flag
+        return feedback
 
     def _cmd_check_ping(self, name='', line=''):
         """
@@ -447,8 +450,7 @@ class Fortigate_agent(Agent):
                     rvalue = match_req.group('rvalue')
                     log.debug("Checking requirement {}={}".format(rname, rvalue))
                     rfdb = self._check_status_requirement(rname=rname, rvalue=rvalue, result=result)
-                    feedback = feedback and rfdbD
-
+                    feedback = feedback and rfdb
         self.add_report_entry(check=name, result=feedback)
         return feedback
 
@@ -602,7 +604,6 @@ class Fortigate_agent(Agent):
                 fb = False
         return fb
 
-
     def _check_bgp_requirement(self, result={}, rname='', rvalue=''):
         """
         Validates bgp routes requirements, that is verifying if the 'has ...' part
@@ -610,8 +611,6 @@ class Fortigate_agent(Agent):
         log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
 
         fb = True  # by default, requirement is met
-
-
         if not 'subnet' in result:
             result['subnet'] = []
 
@@ -632,7 +631,6 @@ class Fortigate_agent(Agent):
                 else:
                     log.debug("Total number of bgp routes does not match requirement")
                     fb = False
-
             elif rname == 'recursive' :
                 log.debug("Checking exact number of recursive routes specifically : asked={} got={}".format(rvalue, result['recursive']))
                 if str(result['recursive']) == str(rvalue):
@@ -640,7 +638,6 @@ class Fortigate_agent(Agent):
                 else:
                     log.debug("Total number of bgp recursive routes does not match requirement")
                     fb = False
-
             elif result[rname].count(rvalue) > 0:
                 log.debug("rname={} found : requirement is met".format(rname))
                 fb = True

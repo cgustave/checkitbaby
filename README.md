@@ -257,6 +257,7 @@ Interact with FortiGate device, generates test results and retrieve information 
 Vdoms are supported.
 
 ###### Status
+Status information from FortiGate : firmware and license.  
 
 ~~~
 # Check that FGT-B1 VM license is Valid
@@ -281,8 +282,7 @@ Some examples :
   `check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive`
 
 ###### Ping 
-Ping check from the the fortigate itself.  
-Send 5 adaptive pings, test pass if no pings are dropped.  
+Ping check from the the fortigate itself. Send 5 adaptive pings, test pass if no pings are dropped.  
 Possible options: vdom=_vdom_name_ source=_source_ip_  
 Packets transmited, received and dropped are added in the report.  
 Examples:  
@@ -332,25 +332,24 @@ FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
 
 
 ###### BGP routes
-
 Checks on routing table BGP from `get router info routing-table bgp`
-
+Add vdom=_vdom_name_ after bgp keyword if vdoms are used
 ~~~
 # number of bgp routes is 4 :
-FGT-B1-1 check [bgp_4_routes] bgp has total=4
+FGT-B1-1 check [bgp_4_routes] route bgp vdom=root has total=4
 
 # bgp route for subnet 10.0.0.0/24 exist :
-FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
+FGT-B1-1 check [bgp_subnet_10.0.0.0] route bgp has subnet=10.0.0.0/24
 
 # bgp nexthop 10.255.1.253 exist
-FGT-B1-1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
+FGT-B1-1 check [bgp_nexthop_10.255.1.253] route bgp has nexthop=10.255.1.253
 
 # bgp has route toward interface vpn_mpls
-FGT-B1-1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
+FGT-B1-1 check [bgp_subnet_10.0.0.0] route bgp has interface=vpn_mpls
 
 # multiple requirements can be combined
-FGT-B1-1 check [multi] bgp has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
-FGT-A:1 check [route_ok] routing table bgp 10.0.0.0/24 next-hop 1.1.1.1 interface port1
+FGT-B1-1 check [multi] route bgp has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
+FGT-A1:1 check [mutli] route bgp has subnet=10.0.0.0/24 next-hop=1.1.1.1 interface=port1
 ~~~
 
 ###### SD-WAN
