@@ -44,8 +44,8 @@ Cedric GUSTAVE
 
 ## Installation
 
-- Requirements : netcontrol python library: `pip install -I netcontrol`
-- Package is hosted on pypi, it should be installed using pip: `pip install -I checkitbaby`
+- Requirements : netcontrol python library: `pip3 install -I netcontrol`
+- Package is hosted on pypi, it should be installed using pip: `pip3 install -I checkitbaby`
 
 
 ## Usage
