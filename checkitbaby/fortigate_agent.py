@@ -7,7 +7,7 @@ import logging as log
 from agent import Agent
 import re
 import fortigate_agent_ipsec
-import fortigate_agent_ping
+import fortigate_agent_execute
 import fortigate_agent_route
 import fortigate_agent_sdwan
 import fortigate_agent_session
@@ -15,7 +15,7 @@ import fortigate_agent_system
 
 # Note: Mixin is a class with only methods.
 # it is used to split the class in multiple sub modules with methods only
-class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.Mixin, fortigate_agent_route.Mixin,
+class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execute.Mixin, fortigate_agent_route.Mixin,
                       fortigate_agent_sdwan.Mixin, fortigate_agent_session.Mixin, fortigate_agent_system.Mixin):
     """
     Fortigate specific agent
@@ -81,12 +81,14 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
         result = {}
         line = self._vdom_processing(line=line)
         if self._vdom != '':
-            self._cmd_enter_vdom()
+            self.cmd_enter_vdom()
+        else:
+            self.cmd_enter_global()
         data = self.parse_line(line=line)
         if data['group'] == 'system':
             result = self.process_system(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
-        elif data['group'] == 'ping':
-            result = self.process_ping(line)
+        elif data['group'] == 'execute':
+            result = self.process_execute(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'session':
             result = self.process_session(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'ipsec':
@@ -96,12 +98,9 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
         elif data['group'] == 'sdwan':
             result = self.process_sdwan(line)
         else:
-            log.error("Syntax error: unknown command group {}".format(command))
+            log.error("Syntax error: unknown command group {}".format(data['command']))
             raise SystemExit
-        if self._vdom != '':
-             self._cmd_leave_vdom()
-        else:
-            log.debug("no vdom")
+        self.cmd_leave_vdom()   # leave_vdom or leave_global are the same (send 'end\n')
         return result
 
 
@@ -118,7 +117,7 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
             log.debug("Matched with command={} subcommand={}".format(command,subcommand))
             if command == 'ike' and subcommand == 'gateway':
                 log.debug("vpn ike gateway flush requested")
-                self._connect_if_needed()
+                self.connect_if_needed()
                 self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
             else:
                 log.error("unknown combination of command={} subcommand={}".format(command, subcommand))
@@ -170,39 +169,39 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
             log.debug("stripped line={}".format(line))
         return line
 
-    def _cmd_enter_vdom(self):
+    def cmd_enter_vdom(self):
         """
         Enters vdom specified in self.vdom
         """
         log.info("Enter having vdom={}".format(self._vdom))
 
-        self._connect_if_needed()
+        self.connect_if_needed()
         result = self._ssh.enter_vdom(vdom=self._vdom)
 
         if not result:
             log.error("Could not enter vdom {}".format(vdom))
             raise SystemExit
 
-    def _cmd_enter_global(self):
+    def cmd_enter_global(self):
         """
         Enters in global section
         """
         log.info("Enter")
 
-        self._connect_if_needed()
+        self.connect_if_needed()
         result = self._ssh.enter_global()
 
         if not result:
             log.error("Could not enter global section")
             raise SystemExit
 
-    def _cmd_leave_vdom(self):
+    def cmd_leave_vdom(self):
         """
         Leaves vdom
         """
         log.info("Enter")
 
-        self._connect_if_needed()
+        self.connect_if_needed()
         #result = self._ssh.leave_vdom()
         result = self._ssh.ssh.shell_send(["end\n"])
         if not result:
@@ -220,7 +219,7 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
         log.info("Enter with name={} line={}".format(name, line))
         line = self._vdom_processing(line=line)
         found_flag = False
-        self._connect_if_needed()
+        self.connect_if_needed()
         result = self._ssh.get_ike_and_ipsec_sa_number()
         if result:
             found_flag = True
@@ -273,7 +272,7 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
         log.info("Enter with name={} line={}".format(name, line))
         line = self._vdom_processing(line=line)
         found_flag = False
-        self._connect_if_needed()
+        self.connect_if_needed()
         result = self._ssh.get_bgp_routes()
         log.debug("Found result={}".format(result))
         # See if at least one bgp route was found
@@ -302,64 +301,8 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
         self.add_report_entry(check=name, result=feedback)
         return feedback
 
-    def _cmd_check_ping(self, name='', line=''):
-        """
-        ping check accepted format
-        ex : fgt1:1 check [ping_test] ping 192.168.0.254
-        ex : fgt1:1 check [ping_test] ping vdom=root 192.168.0.254  (vdom option after ping word)
-        ex : fgt1:1 check [ping_test] ping source=192.168.0.1 192.168.0.254 (source option)
-        Note : transmited/received/drop packets added in report get={} section
-        """
-        log.info("Enter with name={} line={}".format(name, line))
-        line = self._vdom_processing(line=line)
-        result = False
-        self._connect_if_needed()
-        match = re.search('\s+ping\s+(?:source=[A-Za-z0-9_\.-]+)?\s?(?P<host>\S+)', line)
-        if match:
-            host = match.group('host')
-            log.debug("name={} : found host={}".format(name,host))
-        else:
-            log.error("could not recognize ping command syntax line={}".format(line))
-            raise SystemExit
-        if not self._connected:
-            log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
-            self.connect(type='fortigate')
-        reference = self.random_string(length=8)
-        if not self.dryrun:
-            self._ssh.trace_mark(reference)
-            maxround = self._ssh.ssh.maxround
-            self._ssh.ssh.maxround = 90
-            cmd_list = ["execute ping-options reset\n","execute ping-options adaptive-ping enable\n"]
-            match_source = re.search ('source=(?P<source>[A-Za-z0-9_\.-]+)', line)
-            if match_source:
-                source = match_source.group('source')
-                log.debug("source={}".format(source))
-                cmd_list.append("execute ping-options source {}\n".format(source))
-            for data in cmd_list:
-                log.debug("data={}".format(data))
-                self._ssh.ssh.shell_send([data])
-            data = "execute ping "+host+"\n"
-            self._ssh.ssh.shell_send([data])
-            self._ssh.ssh.maxround = maxround
-            sp = self.search_pattern_tracefile(mark=reference, pattern='packets transmitted')
-            log.debug("sp={}".format(sp))
-            if sp['result'] == True:
-                log.debug("Found summary_line={}".format(sp['line']))
-                match = re.search('(?P<transmit>\d+)\spackets\stransmitted,\s(?P<receive>\d+)\spackets\sreceived,\s(?P<drop>\d+)', sp['line'])
-                if match:
-                    transmit = match.group('transmit')
-                    receive = match.group('receive')
-                    drop = match.group('drop')
-                    log.debug("transmit={} receive={} drop={}".format(transmit, receive, drop))
-                    self.add_report_entry(get=name, result={'transmit': transmit, 'receive': receive, 'drop': drop})
-                    if drop == '0':
-                        log.debug("ping test passed (no drop)")
-                        result = True
-                else:
-                    log.warning("Can't extract ping result")
-        return result
 
-    def _connect_if_needed(self, stop_on_error=True):
+    def connect_if_needed(self, stop_on_error=True):
         """
         Connects to fortigate if not already connected
         if stop_on_error is True, exit if connection could not be established
@@ -375,9 +318,6 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
                    raise SystemExit
                 else:
                    log.error("Could not connect to FortiGate {} but continue scenario ".format(self.name))
-
-
-
 
     def _check_bgp_requirement(self, result={}, rname='', rvalue=''):
         """
@@ -467,7 +407,7 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.M
             rule = match_command.group('rule')
             seq = match_command.group('seq')
             log.debug("matched sdwan service rule={} member seq={}".format(rule, seq))
-            self._connect_if_needed()
+            self.connect_if_needed()
             # Query SDWAN service
 
             result = self._ssh.get_sdwan_service(service=rule, version=version)

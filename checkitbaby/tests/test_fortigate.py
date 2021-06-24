@@ -38,7 +38,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         self.fgt.playbook='test'
         self.fgt.run='1'
         self.fgt.testcase=''
-        self.fgt.name='unitest'
+        self.fgt.name='fgt1'
         self.fgt.conn='0'
         self.fgt.connect(type='fortigate')
 
@@ -71,36 +71,36 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- sessions ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_22(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_dst(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 dst=192.168.0.1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_has_state_local(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 has state=local\n")
         self.assertTrue(result)
 
     # --- ping ---
 
-    @unittest.skip
+    #@unittest.skip
     def test_ping_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 192.168.0.254\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
     @unittest.skip
     def test_ping_source_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.168.0.1 192.168.0.254\n")
         self.assertTrue(result)
 
     @unittest.skip
     def test_ping_nok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 169.255.1.2\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 169.255.1.2\n")
         self.assertFalse(result)
 
     # --- IPsec ----

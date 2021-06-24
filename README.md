@@ -264,13 +264,14 @@ Vdoms are supported, add keyword vdom=_vdom_name_ in the command line, examples 
 - to check SDWAN member is alive in SDWAN Rule 1 on vdom 'customer':  
   `check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive`
 
-Commands are organized in groups: (system, ping, session, ipsec, route, sdwan...)
+Commands are organized in groups: (system, execute, session, ipsec, route, sdwan...)
 described below with their associated command syntax.  
 
 
-###### System
+##### System
 Commands related to FortiGate system:
-- status:
+
+###### status:
 ~~~
 # Check FGT-B1 VM license is Valid
 FGT-B1-1:1 check [FGT-B1_license] system status has license=True
@@ -280,6 +281,8 @@ FGT-B1-1:1 check [FGT-B1_license] system status has license=True
 FGT-B1-1:1 get system status
 ~~~
 
+##### Execute
+Commands and checks related to Fortigate cli 'execute' commands 
 
 ###### Ping 
 Ping check from the the fortigate itself. Send 5 adaptive pings, test pass if no pings are dropped.  
@@ -296,7 +299,7 @@ Examples:
 	`FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254` 
 
 
-###### Session
+##### Session
 
 Checks on FortiGate session table.
 This command has a first **'filter'** section to select the sessions. An implicit 'diag sys session filter clear' is done before the command. Allowed keywords are :  
@@ -314,7 +317,7 @@ FGT-B1-1 check [ssh_session_exist] session filter dport=22 dst=192.168.0.1
 FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 ~~~
 
-###### IPsec
+##### IPsec
 
 - Generic checks on IPsec based on `diagnose vpn ike status`
 - flush all ike gateway
@@ -331,10 +334,10 @@ FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
 ~~~
 
 
-###### route
+##### route
 Commands related to fortigate routing table.
 
-- BGP:
+###### BGP:
 Checks on routing table BGP from `get router info routing-table bgp`.  
 Examples:
 ~~~
@@ -355,7 +358,7 @@ FGT-B1-1 check [multi] route bgp has nexthop=10.255.1.253 nexthop=10.255.2.253 s
 FGT-A1:1 check [mutli] route bgp has subnet=10.0.0.0/24 next-hop=1.1.1.1 interface=port1
 ~~~
 
-###### SD-WAN
+##### SD-WAN
 
 Various checks from `diagnose sys sdwan service <SERVICE>`  
 For v6.2 version, make sure to add version=6.2 (to use old diag command diag sys virtual-wan-link).
@@ -380,7 +383,7 @@ FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=
 Interact with FortiPoC to bring ports up or down
 Using fpoc link up/down __device__ __port__
 
-###### link up / link down
+##### link up / link down
 ~~~
 # Bring up link for FGT-B1-port1 switch side
 fpoc:1 link up FGT-B1-1 port1
@@ -395,7 +398,7 @@ fpoc:1 link down FGT-B1-1 port1
 Interact with FortiSwitch (hardware or VM) to bring ports admin up or down
 Check status of a port1 and eventually expect a certain state
 
-###### link up / link down
+##### link up / link down
 ~~~
 # Bring port admin up
 fsw:1 port up port10
@@ -404,7 +407,7 @@ fsw:1 port up port10
 fsw:1 port down port10
 ~~~
 
-###### check port link status
+##### check port link status
 ~~~
 # Check to get port status for record only purpose
 fsw:1 check [status_port10] port status port10

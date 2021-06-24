@@ -37,7 +37,7 @@ class Mixin:
         log.info("Enter having _vdom={} dryrun={} with type={} check={} line={}".format(self._vdom, self.dryrun, type, check, line))
         result = {}
         if not self.dryrun:
-            self._connect_if_needed(stop_on_error=False)
+            self.connect_if_needed(stop_on_error=False)
             result = self._ssh.get_status()
             log.debug("result={}".format(result))
             self.add_report_entry(get='version', result=result['version'])

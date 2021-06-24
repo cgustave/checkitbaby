@@ -62,7 +62,7 @@ class Mixin:
                     session_filter[fname]=fvalue
         log.debug("Prepared session_filter={}".format(session_filter))
         # Connect to agent if not already connected
-        self._connect_if_needed()
+        self.connect_if_needed()
         # Query for session
         result = self._ssh.get_session(filter=session_filter)
         log.debug("Found result={}".format(result))
