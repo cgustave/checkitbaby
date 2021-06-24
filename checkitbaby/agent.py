@@ -277,6 +277,50 @@ class Agent(object):
             log.debug("dryrun mode")
         return success
 
+    def get_requirements(self, line=""):
+        """
+        Returns a list of key/value pairs corresponding to the requirement list.
+        Requirements are expressed as key=value separated by spaces, after keyword 'has'
+        """
+        log.info("Enter with line={}".format(line))
+        reqlist = []
+        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
+        if match_has:
+            requirements = match_has.group('requirements')
+            log.debug("requirements string {}".format(requirements))
+            nb = 0
+            for r in requirements.split():
+                nb = nb + 1
+                log.debug("requirement nb={} string={}".format(nb, r))
+                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                if match_req:
+                    rname = match_req.group('rname')
+                    rvalue = match_req.group('rvalue')
+                    reqlist.append({ 'name': rname, 'value': rvalue })
+                else:
+                    log.error("Syntax error : failed to extract requirement from {}".value(r))
+                    raise SystemExit
+        else:
+            log.debug("no requirements found")
+        return reqlist
+
+    def check_requirement(self, result={}, name='', value=''):
+        """
+        Validates the given requirement.
+        Returns true if the name/value pair received exists in result dictionary
+        """
+        log.info("Enter with name={} value={} result={}".format(name, value, result))
+        fb = True  # by default, requirement is met
+        if not name in result:
+            log.warning("requirement name={} is not in result={}".format(name, result))
+            return False
+        elif str(result[name]) == str(value):
+            log.debug("{}={} requirement is met".format(name, value))
+            return True
+        else:
+            log.debug("{}={} requirement is not met".format(name, value))
+            return False
+
     def close(self):
         """
         Generic close for all agent, may be overwritten

@@ -46,156 +46,155 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     #@unittest.skip
     def test_get_status(self):
-        result = self.fgt.process(line="FGT-B1-1:1 get status\n")
-        self.assertEqual(result['version'],'v6.4.6,build1879,210520')
-        self.assertTrue(result['license'])
+        result = self.fgt.process(line="FGT-B1-1:1 get system status\n")
+        self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_no_requirement(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_license(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has license=True\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has license=True\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_version(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has version=v6.4.6,build1879,210520\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_license_and_version(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has version=v6.4.6,build1879,210520 license=True\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520 license=True\n")
         self.assertTrue(result)
 
     # --- sessions ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_22(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_dst(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 dst=192.168.0.1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_session_dport_has_state_local(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 has state=local\n")
         self.assertTrue(result)
 
     # --- ping ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_source_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 169.255.1.2\n")
         self.assertFalse(result)
 
     # --- IPsec ----
 
-    #@unittest.skip
+    @unittest.skip
     def test_ike_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ike_status_with_requirements(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
         self.assertTrue(result)
 
     # --- BGP routes ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bpg_has_total_2_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=2\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bpg_has_total_3_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=3\n")
         self.assertFalse(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_subnet_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=10.0.0.0/24\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_subnet_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=11.2.3.0/24\n")
         self.assertFalse(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_nexthop_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has nexthop=10.255.1.253\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_nexthop_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has nexthop=10.10.40.22\n")
         self.assertFalse(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_interface_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has interface=vpn_isp1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_route_bgp_has_interface_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has interface=vpn_isp9\n")
         self.assertFalse(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_multi_statement_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=10.0.0.0/24 nexthop=10.255.1.253 interface=vpn_isp1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_multi_statement_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=14.3.2.0/24 nexthop=10.255.1.253 interface=vpn_isp1\n")
         self.assertFalse(result)
 
     # --- SD-Wan ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_sdwan_service(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_sdwan_service_requirement_preferred(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has preferred=1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_sdwan_service_requirement_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has status=alive\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_sdwan_service_requirement_sla(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has sla=0x1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_sdwan_service_v62(self):
         # 6.2 should use "diag sys virtual-wan-link and cause an error on 6.4"
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=0x1\n")

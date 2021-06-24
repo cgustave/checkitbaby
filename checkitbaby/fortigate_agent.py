@@ -6,8 +6,17 @@ Created on Feb 12, 2020
 import logging as log
 from agent import Agent
 import re
+import fortigate_agent_ipsec
+import fortigate_agent_ping
+import fortigate_agent_route
+import fortigate_agent_sdwan
+import fortigate_agent_session
+import fortigate_agent_system
 
-class Fortigate_agent(Agent):
+# Note: Mixin is a class with only methods.
+# it is used to split the class in multiple sub modules with methods only
+class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_ping.Mixin, fortigate_agent_route.Mixin,
+                      fortigate_agent_sdwan.Mixin, fortigate_agent_session.Mixin, fortigate_agent_system.Mixin):
     """
     Fortigate specific agent
     To avoid ssh connection issues because of key change, it is recommended to use a ssh key to connect to FortiGate
@@ -52,8 +61,7 @@ class Fortigate_agent(Agent):
 
         # Private attributs
         self._connected = False  # ssh connection state with the agent
-        self._ssh = None         # Will be instanciated with type Vyos
-
+        self._vdom = ''          # Keep track of config vdom
 
     def __del__(self):
         """
@@ -70,42 +78,35 @@ class Fortigate_agent(Agent):
         list of commands :
         """
         log.info("Enter with line={}".format(line))
-        match = re.search("(?:(\s|\t)*[A-Za-z0-9\-_]+:\d+(\s|\t)+)(?P<command>[A-Za-z-]+)",line)
-        if match:
-            command = match.group('command')
-            log.debug("Matched with command={}".format(command))
-        else:
-            log.debug("No command has matched")
-        if command == 'get':
-            result = self.cmd_get(line)
-        elif command == 'check':
-             result = self.cmd_check(line)
-        elif command == 'flush':
-            self.cmd_flush(line)
-        else:
-            log.warning("command {} is unknown".format(command))
-        return result
-
-    def cmd_get(self, line=""):
-        """
-        Process get commands
-        """
-        log.info("Enter with line={}".format(line))
-        self._connect_if_needed(stop_on_error=False)
+        result = {}
         line = self._vdom_processing(line=line)
-        match_version = re.search("get\sstatus", line)
-        if match_version:
-             if not self.dryrun:
-                 result = self._ssh.get_status()
-                 log.debug("==> result={}".format(result))
-                 self.add_report_entry(get='version', result=result['version'])
-                 self.add_report_entry(get='license', result=result['license'])
-                 return result
-             else:
-                 log.debug("dry-run")
+        match = re.search("(\s|\t)*(?P<agent>[A-Za-z0-9\-_]+):(?P<conn>\d+)(\s|\t)+(?P<type>get|check|flush)(\s|\t)*(\[\S+\])?(\s|\t)*(?P<group>[A-Za-z-]+)(\s|\t)*(?P<command>[A-Za-z-]+)",line)
+        if match:
+            agent = match.group('agent')
+            conn = match.group('conn')
+            type = match.group('type')
+            group = match.group('group')
+            command = match.group('command')
+            log.debug("Matched with agent={} conn={} type={} group={} command={}".format(agent, conn, type, group, command))
         else:
-            log.error("unknown get command from line={}".format(line))
+            log.error("Syntax error: could not extract agent, connection or command from {}".format(line))
             raise SystemExit
+        if group == 'system':
+            result = self.process_system(line=line, agent=agent, conn=conn, type=type, command=command)
+        elif group == 'ping':
+            result = self.process_ping(line)
+        elif group == 'session':
+            result = self.process_session(line)
+        elif group == 'ipsec':
+            result = self.process_ipsec(line)
+        elif group == 'route':
+            result = self.process_route(line)
+        elif group == 'sdwan':
+            result = self.process_sdwan(line)
+        else:
+            log.error("Syntax error: unknown command group {}".format(command))
+            raise SystemExit
+        return result
 
     def cmd_check(self, line=""):
         """
@@ -179,8 +180,9 @@ class Fortigate_agent(Agent):
         Do what is needed if query is specific for a vdom or global section
         We are looking for pattern \svdom=VDOM\s to enter vdom
         We are looking for \svdom=global\s to enter global section
-        the line is then returned without its vdom=XXXX keyword for further
-        processing
+        the line is then returned without its vdom=XXXX keyword for further processing
+        record vdom in self.vdom
+        self._vdom is set vdom name if vdom=<vdom> was specified in the line
         """
         log.info("Enter with line={}".format(line))
         # Match global
@@ -188,11 +190,11 @@ class Fortigate_agent(Agent):
         match_vdom =  re.search("\svdom=(?P<vd>\S+)\s", line)
         found = False
         if match_global:
-            self._cmd_enter_global()
+            self._vdom=''
             found = True
         elif match_vdom:
             vd = match_vdom.group('vd')
-            self._cmd_enter_vdom(vdom=vd)
+            self._vdom=vd
             found = True
         # remove vdom= from line is needed for further processing
         if found:
@@ -201,11 +203,11 @@ class Fortigate_agent(Agent):
             log.debug("stripped line={}".format(line))
         return line
 
-    def _cmd_enter_vdom(self, vdom=""):
+    def _cmd_enter_vdom(self):
         """
-        Enters in specified vdom
+        Enters vdom specified in self.vdom
         """
-        log.info("Enter with vdom={}".format(vdom))
+        log.info("Enter having vdom={}".format(self.vdom))
 
         self._connect_if_needed()
         result = self._ssh.enter_vdom(vdom=vdom)
@@ -225,6 +227,19 @@ class Fortigate_agent(Agent):
 
         if not result:
             log.error("Could not enter global section")
+            raise SystemExit
+
+    def _cmd_leave_vdom(self):
+        """
+        Leaves vdom
+        """
+        log.info("Enter")
+
+        self._connect_if_needed()
+        #result = self._ssh.leave_vdom()
+        self._ssh.ssh.shell_send("end")
+        if not result:
+            log.error("Could not leave vdom {}".format(vdom))
             raise SystemExit
 
     def _cmd_check_ike(self, name="", line=""):
@@ -394,43 +409,6 @@ class Fortigate_agent(Agent):
                 else:
                    log.error("Could not connect to FortiGate {} but continue scenario ".format(self.name))
 
-    def _cmd_check_status(self, name="", line=""):
-        """
-        Check on fortigate get system status command
-        - license is valid
-        """
-        log.info("Enter with name={} line={}".format(name, line))
-        found_flag = False
-        self._connect_if_needed(stop_on_error=True)
-        if not self.dryrun:
-            result = self._ssh.get_status()
-            license = result['license']
-            version = result['version']
-            # Use this opportunity to record firmware as 'get' value
-            self.add_report_entry(get='version', result=result['version'])
-            log.debug("found license={} version={}".format(license, version))
-        else:
-            log.debug("dry-run")
-        if result:
-            found_flag = True
-        # Without any further requirements, result is pass
-        feedback = found_flag
-        # Processing further requirements (has ...)
-        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
-        if match_has:
-            requirements = match_has.group('requirements')
-            log.debug("requirements list: {}".format(requirements))
-            for r in requirements.split():
-                log.debug("requirement: {}".format(r))
-                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
-                if match_req:
-                    rname = match_req.group('rname')
-                    rvalue = match_req.group('rvalue')
-                    log.debug("Checking requirement {}={}".format(rname, rvalue))
-                    rfdb = self._check_status_requirement(rname=rname, rvalue=rvalue, result=result)
-                    feedback = feedback and rfdb
-        self.add_report_entry(check=name, result=feedback)
-        return feedback
 
     def _cmd_check_session(self, name="", line=""):
         """
@@ -538,30 +516,7 @@ class Fortigate_agent(Agent):
         log.debug("requirements verdict : {}".format(fb))
         return fb
 
-    def _check_status_requirement(self, result={}, rname='', rvalue=''):
-        """
-        Validates status requirement
-        has license=True (be careful with case, true is not True)
-        """
-        log.info("Enter with rname={} rvalue={} result={}".format(rname, rvalue, result))
-        fb = True  # by default, requirement is met
-        if not 'license' in result:
-            result['license'] = {}
-        if rname == 'license':
-            log.debug("Checking license requirement")
-            if str(result['license']) == str(rvalue):
-                log.debug("License requirement is met")
-            else:
-                log.debug("License requirement is not met")
-                fb = False
-        if rname == 'version':
-            log.debug("Checking version requirement")
-            if str(result['version']) == str(rvalue):
-                log.debug("Version requirement is met")
-            else:
-                log.debug("Version requirement is not met")
-                fb = False
-        return fb
+
 
     def _check_bgp_requirement(self, result={}, rname='', rvalue=''):
         """
