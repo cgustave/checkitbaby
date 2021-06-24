@@ -9,13 +9,12 @@ import re
 
 class Fortigate_agent(Agent):
     """
-    Fortigate agent
-    To avoid ssh connection issues because of key change, it is recommended
-    to use an ssh key to connect to FortiGate
-    Commands :
-      get version
-        ex : FGT-1:1 get version
-      check [policy_flag] session filter dport 22 has flag may_dirty
+    Fortigate specific agent
+    To avoid ssh connection issues because of key change, it is recommended to use a ssh key to connect to FortiGate
+    1st called method (entry point) is process()
+    Specific agent is implemented from Agent.py during normal usage. Direct implementation is only for unittest.
+    See tests/test_fortigate.py unittests for samples of user commands.
+    Agent syntax documented in README.md
     """
 
     def __init__(self, name='', conn=0, dryrun=False, debug=False):
@@ -66,7 +65,8 @@ class Fortigate_agent(Agent):
 
     def process(self, line=""):
         """
-        FortiGate specific processing
+        FortiGate specific processing.
+        Agent entry point.
         list of commands :
         """
         log.info("Enter with line={}".format(line))
