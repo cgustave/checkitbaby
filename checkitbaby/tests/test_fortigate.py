@@ -44,44 +44,44 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- status ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_get_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 get system status\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_check_status_no_requirement(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_check_status_has_license(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has license=True\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_check_status_has_version(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_check_status_has_license_and_version(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520 license=True\n")
         self.assertTrue(result)
 
     # --- sessions ---
 
-    @unittest.skip
+    #@unittest.skip
     def test_session_dport_22(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_session_dport_dst(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 dst=192.168.0.1\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_session_dport_has_state_local(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 has state=local\n")
         self.assertTrue(result)

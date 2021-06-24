@@ -123,6 +123,31 @@ class Agent(object):
         log.debug("type={} filename={}".format(type, filename))
         return(filename)
 
+    def parse_line(self, line=''):
+        """
+        Parses agent line to extract required information common to all agents
+        Returns a dictionary of line elements
+        Generate ERROR and exit in case of syntax errors
+        """
+        log.info("Enter with line={}".format(line))
+        match = re.search("(\s|\t)*(?P<agent>[A-Za-z0-9\-_]+):(?P<conn>\d+)(\s|\t)+(?P<type>get|check|flush)(\s|\t)*(?P<check>\[\S+\])?(\s|\t)*(?P<group>[A-Za-z-]+)(\s|\t)*(?P<command>[A-Za-z-]+)",line)
+        if match:
+            agent = match.group('agent')
+            conn = match.group('conn')
+            type = match.group('type')
+            check = match.group('check')
+            # Remove [ ] from check
+            match_check = re.search('\[(?P<check>\S+)\]', check)
+            if match_check:
+                check = match_check.group('check')
+            group = match.group('group')
+            command = match.group('command')
+            log.debug("Matched with agent={} conn={} type={} check={} group={} command={}".format(agent, conn, type, check, group, command))
+        else:
+            log.error("Syntax error: could not extract agent, connection or command from {}".format(line))
+            raise SystemExit
+        return { 'agent': agent, 'conn': conn, 'type': type, 'check': check, 'group': group, 'command': command }
+
     def add_report_entry(self, check="", get="", result=""):
         """
         Adds an entry in the report.

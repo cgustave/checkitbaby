@@ -18,36 +18,30 @@ class Mixin:
     """
     Specific Fortigate agent system functions loaded in FortiGate_agent
     """
-    def process_system(self, agent="", conn="1", type="", command="", line=""):
-        log.info("Enter with agent={} conn={} type={} command={} line={} ".format(agent, conn, type, command, line))
+    def process_system(self, agent="", conn="1", type="", check="", command="", line=""):
+        log.info("Enter with agent={} conn={} type={} check={} command={} line={} ".format(agent, conn, type, check, command, line))
         if command == 'status':
-            result = self.cmd_status(line=line, type=type)
+            result = self.cmd_status(line=line, type=type, check=check)
         else:
             log.error("Syntax error: command {} unknown".format(command))
             raise SystemExit
         return result
 
-    def cmd_status(self, type='', line=""):
+    def cmd_status(self, type='', check='',  line=""):
         """
         get system status
         Records version and license in report
         check: returns True/False as per requirements
         get: returns True but add entries in report
         """
-        log.info("Enter having _vdom={} dryrun={} with type={} line={}".format(self._vdom, self.dryrun, type, line))
+        log.info("Enter having _vdom={} dryrun={} with type={} check={} line={}".format(self._vdom, self.dryrun, type, check, line))
         result = {}
         if not self.dryrun:
             self._connect_if_needed(stop_on_error=False)
-            if self._vdom != '':
-                self._cmd_enter_vdom(line=line)
             result = self._ssh.get_status()
             log.debug("result={}".format(result))
             self.add_report_entry(get='version', result=result['version'])
             self.add_report_entry(get='license', result=result['license'])
-            if self._vdom != '':
-                 self._cmd_leave_vdom(line=line)
-            else:
-                log.debug("no vdom")
         else:
             log.debug("dry-run")
         if type == 'get':
@@ -60,5 +54,5 @@ class Mixin:
             log.debug("requirement: {}".format(r))
             rfdb = self.check_requirement(name=r['name'], value=r['value'], result=result)
             feedback = feedback and rfdb
-            self.add_report_entry(check=r['name'], result=feedback)
+        self.add_report_entry(check=check, result=feedback)
         return feedback
