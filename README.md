@@ -319,9 +319,11 @@ FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 
 ##### IPsec
 
-- Generic checks on IPsec based on `diagnose vpn ike status`
+- Generic checks on IPsec `diagnose vpn ike status`
 - flush all ike gateway
 
+###### ike
+Ike related commands based on `diagnose vpn ike status` and `diagnose vpn ike gateway flush`
 ~~~
 # Flush all ike gateways ('diagnose vpn ike gateway flush')
 FGT-B1-1:1 flush ike gateway

@@ -92,7 +92,7 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         elif data['group'] == 'session':
             result = self.process_session(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'ipsec':
-            result = self.process_ipsec(line)
+            result = self.process_ipsec(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'route':
             result = self.process_route(line)
         elif data['group'] == 'sdwan':
@@ -208,51 +208,6 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
             log.error("Could not leave vdom {}".format(vdom))
             raise SystemExit
 
-    def _cmd_check_ike(self, name="", line=""):
-        """
-        ike status:
-        Checks on IPsec ike status (from 'diagnose vpn ike status'), examples:
-          FGT-B1-1:1 check [B1_tunnels] ike status has ike_created=3
-          FGT-B1-1:1 check [B1_tunnels] ike status has ike_created=3 ike_established=3
-          FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
-        """
-        log.info("Enter with name={} line={}".format(name, line))
-        line = self._vdom_processing(line=line)
-        found_flag = False
-        self.connect_if_needed()
-        result = self._ssh.get_ike_and_ipsec_sa_number()
-        if result:
-            found_flag = True
-            # Without any further requirements, result is pass
-            feedback = found_flag
-            # Processing further requirements (has ...)
-            match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
-            if match_has:
-                requirements = match_has.group('requirements')
-                log.debug("requirements list: {}".format(requirements))
-                rnum = 0
-                for r in requirements.split():
-                    rnum = rnum + 1
-                    log.debug("requirement num={} : {}".format(rnum, r))
-                    match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
-                    if match_req:
-                        rname = match_req.group('rname')
-                        rvalue = match_req.group('rvalue')
-                        log.debug("Checking requirement {}={}".format(rname, rvalue))
-                        if rname == 'ike_created':
-                            rfdb = self.check_requirement(name='created', value=rvalue, result=result['ike'])
-                        elif rname == 'ike_established':
-                            rfdb = self.check_requirement(name='established', value=rvalue, result=result['ike'])
-                        elif rname == 'ipsec_created':
-                            rfdb = self.check_requirement(name='created', value=rvalue, result=result['ipsec'])
-                        elif rname == 'ipsec_established':
-                            rfdb = self.check_requirement(name='established', value=rvalue, result=result['ike'])
-                        else:
-                            log.error("unrecognized requirement")
-                            raise SystemExit
-                        feedback = feedback and rfdb
-            self.add_report_entry(check=name, result=feedback)
-            return found_flag
 
     def _cmd_check_route_bgp(self, name="", line=""):
         """

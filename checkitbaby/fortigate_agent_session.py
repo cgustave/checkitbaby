@@ -19,7 +19,6 @@ class Mixin:
     """
     Specific Fortigate agent session functions loaded in FortiGate_agent
     """
-
     def process_session(self, agent="", conn="1", type="", check="", command="", line=""):
         log.info("Enter with agent={} conn={} type={} check={} command={} line={} ".format(agent, conn, type, check, command, line))
         if command == 'filter' and type == 'check':

@@ -88,31 +88,31 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- ping ---
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_source_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.168.0.1 192.168.0.254\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ping_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 169.255.1.2\n")
         self.assertFalse(result)
 
     # --- IPsec ----
 
-    @unittest.skip
+    #@unittest.skip
     def test_ike_status(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_ike_status_with_requirements(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
         self.assertTrue(result)
 
     # --- BGP routes ---
