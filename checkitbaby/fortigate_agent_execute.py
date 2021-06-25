@@ -75,7 +75,7 @@ class Mixin:
                     receive = match.group('receive')
                     drop = match.group('drop')
                     log.debug("transmit={} receive={} drop={}".format(transmit, receive, drop))
-                    self.add_report_entry(get='ping', result={'transmit': transmit, 'receive': receive, 'drop': drop})
+                    self.add_report_entry(data=check, result={'transmit': transmit, 'receive': receive, 'drop': drop})
                     if drop == '0':
                         log.debug("ping test passed (no drop)")
                         result = True

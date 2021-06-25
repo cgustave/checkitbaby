@@ -148,13 +148,16 @@ class Agent(object):
             raise SystemExit
         return { 'agent': agent, 'conn': conn, 'type': type, 'check': check, 'group': group, 'command': command }
 
-    def add_report_entry(self, check="", get="", result=""):
+    def add_report_entry(self, check="", get="", data="", result=""):
         """
         Adds an entry in the report.
         For a check entry, call with check=check_name, result=pass|fail
-        Update the testcase generic result
+        Update the testcase generic result.
+        get: from 'get' commands (like get system status)
+        check: the subkey is the check name (in brackets in the line), value is True for a Pass and False for a Fail.
+        data: same subkey as the check command. Key 'data' is used to store additional information gathere during a check.
         """
-        log.info("Enter with check={} get={} result={}".format(check, get, result))
+        log.info("Enter with check={} get={} data={} result={}".format(check, get, data, result))
 
         # Create playbook result if needed
         if 'result' not in self.report:
@@ -179,7 +182,10 @@ class Agent(object):
         if 'get' not in self.report['testcases'][self.testcase]:
             self.report['testcases'][self.testcase]['get'] = {}
 
-        # Add check report entry
+        # Create 'data' group if needed
+        if 'data' not in self.report['testcases'][self.testcase]:
+            self.report['testcases'][self.testcase]['data'] = {}
+
         if check:
             log.debug("Adding check={} result={} in testcase={}".format(check, result, self.testcase))
             self.report['testcases'][self.testcase]['check'][check] = result
@@ -193,6 +199,10 @@ class Agent(object):
             tr = self.report['testcases'][self.testcase]['result'] and result
             self.report['testcases'][self.testcase]['result'] = tr
             log.debug("Testcase result updated with result={}".format(tr))
+
+        if data:
+            log.debug("Adding data={} result={} in testcase={}".format(data, result, self.testcase))
+            self.report['testcases'][self.testcase]['data'][data] = result
 
         # Add get report entry for the given agent
         if get:

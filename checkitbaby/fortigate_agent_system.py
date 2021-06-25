@@ -46,13 +46,17 @@ class Mixin:
             log.debug("dry-run")
         if type == 'get':
             return True
-        if result:
-            found_flag = True    # Without any further requirements, result is pass
-        feedback = found_flag
-        reqlist = self.get_requirements(line=line)
-        for r in reqlist:
-            log.debug("requirement: {}".format(r))
-            rfdb = self.check_requirement(name=r['name'], value=r['value'], result=result)
-            feedback = feedback and rfdb
-        self.add_report_entry(check=check, result=feedback)
-        return feedback
+        elif type == 'check':
+            if result:
+                found_flag = True    # Without any further requirements, result is pass
+            feedback = found_flag
+            reqlist = self.get_requirements(line=line)
+            for r in reqlist:
+                log.debug("requirement: {}".format(r))
+                rfdb = self.check_requirement(name=r['name'], value=r['value'], result=result)
+                feedback = feedback and rfdb
+            self.add_report_entry(check=check, result=feedback)
+            return feedback
+        else:
+            log.error("unexpected type")
+            raise SystemExit
