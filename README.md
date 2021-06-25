@@ -326,13 +326,13 @@ FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 Ike related commands based on `diagnose vpn ike status` and `diagnose vpn ike gateway flush`
 ~~~
 # Flush all ike gateways ('diagnose vpn ike gateway flush')
-FGT-B1-1:1 flush ike gateway
+FGT-B1-1:1 flush ipsec ike gateway
 
 # Check number of established ike tunnels
-FGT-B1-1:1 check [B1_tunnels] ike status has ike_established=3
+FGT-B1-1:1 check [B1_tunnels] ipsec ike status has ike_established=3
 
 # Check number of established IPsec tunnels (created and established)
-FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
+FGT-B1-1:1 check [B1_tunnels] ipsec ike status has ipsec_created=3 ipsec_established=3
 ~~~
 
 

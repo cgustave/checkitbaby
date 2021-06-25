@@ -137,9 +137,10 @@ class Agent(object):
             type = match.group('type')
             check = match.group('check')
             # Remove [ ] from check
-            match_check = re.search('\[(?P<check>\S+)\]', check)
-            if match_check:
-                check = match_check.group('check')
+            if check:
+                match_check = re.search('\[(?P<check>\S+)\]', check)
+                if match_check:
+                    check = match_check.group('check')
             group = match.group('group')
             command = match.group('command')
             log.debug("Matched with agent={} conn={} type={} check={} group={} command={}".format(agent, conn, type, check, group, command))

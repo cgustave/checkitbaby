@@ -105,69 +105,74 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- IPsec ----
 
-    #@unittest.skip
+    @unittest.skip
     def test_ike_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    @unittest.skip
     def test_ike_status_with_requirements(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
         self.assertTrue(result)
 
+    @unittest.skip
+    def test_ike_gateway_flush(self):
+        result = self.fgt.process(line="FGT-B1-1:1 flush vdom=root ipsec ike gateway\n")
+        self.assertTrue(result)
+
     # --- BGP routes ---
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bpg_has_total_2_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=2\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bpg_has_total_3_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=3\n")
         self.assertFalse(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_subnet_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=10.0.0.0/24\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_subnet_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=11.2.3.0/24\n")
         self.assertFalse(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_nexthop_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has nexthop=10.255.1.253\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_nexthop_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has nexthop=10.10.40.22\n")
         self.assertFalse(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_interface_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has interface=vpn_isp1\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_route_bgp_has_interface_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has interface=vpn_isp9\n")
         self.assertFalse(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_multi_statement_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=10.0.0.0/24 nexthop=10.255.1.253 interface=vpn_isp1\n")
         self.assertTrue(result)
 
-    @unittest.skip
+    #@unittest.skip
     def test_multi_statement_nok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has subnet=14.3.2.0/24 nexthop=10.255.1.253 interface=vpn_isp1\n")
         self.assertFalse(result)

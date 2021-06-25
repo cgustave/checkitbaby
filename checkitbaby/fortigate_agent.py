@@ -94,51 +94,13 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         elif data['group'] == 'ipsec':
             result = self.process_ipsec(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'route':
-            result = self.process_route(line)
+            result = self.process_route(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'sdwan':
             result = self.process_sdwan(line)
         else:
             log.error("Syntax error: unknown command group {}".format(data['command']))
             raise SystemExit
         self.cmd_leave_vdom()   # leave_vdom or leave_global are the same (send 'end\n')
-        return result
-
-
-    def cmd_flush(self, line=""):
-        """
-        Process flush command:
-          - flush ike gateway
-        """
-        log.info("Enter with line={}".format(line))
-        match_command = re.search("flush\s+(?P<command>\w+)\s+(?P<subcommand>\w+)", line)
-        if match_command:
-            command = match_command.group('command')
-            subcommand = match_command.group('subcommand')
-            log.debug("Matched with command={} subcommand={}".format(command,subcommand))
-            if command == 'ike' and subcommand == 'gateway':
-                log.debug("vpn ike gateway flush requested")
-                self.connect_if_needed()
-                self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
-            else:
-                log.error("unknown combination of command={} subcommand={}".format(command, subcommand))
-                raise SystemExit
-        else:
-            log.debug("No command has matched")
-
-    def _cmd_check_route(self, line=''):
-        """
-        Check command route distribution
-        """
-        log.info("Enter with line={}".format(line))
-        match_command = re.search("check(\s|\t)+\[(?P<name>.+)\](\s|\t)+(?:route)\s+(?P<command>\w+)",line)
-        if match_command:
-            name =  match_command.group('name')
-            command = match_command.group('command')
-            if command == 'bgp':
-                result = self._cmd_check_route_bgp(name=name, line=line)
-            else:
-                log.error("Unknown check route command")
-                raise SystemExit
         return result
 
     def _vdom_processing(self, line):
@@ -207,55 +169,6 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         if not result:
             log.error("Could not leave vdom {}".format(vdom))
             raise SystemExit
-
-
-    def _cmd_check_route_bgp(self, name="", line=""):
-        """
-        Checks on bgp routing table (from get router info routing-table bgp)
-        - number of bgp routes is 4 :
-            ex : FGT-B1-1:1 check [bgp_4_routes] bgp has total=4
-        - bgp route for subnet 10.0.0.0/24 exist :
-            ex : FGT-B1-1:1 check [bgp_subnet_10.0.0.0] bgp has subnet=10.0.0.0/24
-        - bgp nexthop 10.255.1.253 exist
-            ex : FGT-B1-1:1 check [bgp_nexthop_10.255.1.253] bgp has nexthop=10.255.1.253
-        - bgp has route toward interface vpn_mpls
-            ex : FGT-B1-1:1 check [bgp_subnet_10.0.0.0] bgp has interface=vpn_mpls
-        - multiple requirements can be combined
-            ... has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
-        - allows vdom= statement, should be positioned after bgp keyword
-        """
-        log.info("Enter with name={} line={}".format(name, line))
-        line = self._vdom_processing(line=line)
-        found_flag = False
-        self.connect_if_needed()
-        result = self._ssh.get_bgp_routes()
-        log.debug("Found result={}".format(result))
-        # See if at least one bgp route was found
-        if result:
-            if result['total'] >= 1:
-                log.debug("At least 1 bgp route was found (total={})".format(result['total']))
-                found_flag = True
-        # Without any further requirements, result is pass
-        feedback = found_flag
-        # Processing further requirements (has ...)
-        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
-        if match_has:
-            requirements = match_has.group('requirements')
-            log.debug("requirements list: {}".format(requirements))
-            rnum = 0
-            for r in requirements.split():
-                rnum = rnum + 1
-                log.debug("requirement No={} : {}".format(rnum, r))
-                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
-                if match_req:
-                    rname = match_req.group('rname')
-                    rvalue = match_req.group('rvalue')
-                    log.debug("Checking requirement {}={}".format(rname, rvalue))
-                    rfdb = self._check_bgp_requirement(rname=rname, rvalue=rvalue, result=result)
-                    feedback = feedback and rfdb
-        self.add_report_entry(check=name, result=feedback)
-        return feedback
-
 
     def connect_if_needed(self, stop_on_error=True):
         """

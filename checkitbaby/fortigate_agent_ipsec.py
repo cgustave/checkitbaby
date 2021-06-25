@@ -19,11 +19,12 @@ class Mixin:
     """
     Specific Fortigate agent ipsec functions loaded in FortiGate_agent
     """
-
     def process_ipsec(self, agent="", conn="1", type="", check="", command="", line=""):
         log.info("Enter with agent={} conn={} type={} check={} command={} line={} ".format(agent, conn, type, check, command, line))
-        if command == 'ike':
+        if command == 'ike' and type == 'check':
             result = self.cmd_ike(check=check ,line=line)
+        elif command == 'ike' and type == 'flush':
+            result = self.cmd_ike_flush(line=line)
         else:
             log.error("Syntax error: command {} unknown".format(command))
             raise SystemExit
@@ -77,3 +78,13 @@ class Mixin:
             self.add_report_entry(check=check, result=feedback)
             self.add_report_entry(data=check, result=result)
             return found_flag
+
+    def cmd_ike_flush(self, line=""):
+        """
+        Process flush command:
+          - flush ike gateway
+        """
+        log.info("Enter with line={}".format(line))
+        self.connect_if_needed()
+        result = self._ssh.cli(commands=['diagnose vpn ike gateway flush'])
+        return True
