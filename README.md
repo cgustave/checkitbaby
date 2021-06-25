@@ -363,7 +363,8 @@ FGT-A1:1 check [mutli] route bgp has subnet=10.0.0.0/24 next-hop=1.1.1.1 interfa
 ##### SD-WAN
 
 Various checks from `diagnose sys sdwan service <SERVICE>`  
-For v6.2 version, make sure to add version=6.2 (to use old diag command diag sys virtual-wan-link).
+For v6.2 version, make sure to add version=6.2 at the end of the line or before the requirements (has)
+This would make use of old diag command 'diag sys virtual-wan-link'.
 
 ~~~
 # check alive members :
@@ -376,7 +377,7 @@ FGT-B1-1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1
 FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 
 # Check on a v6.2 version
-FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=0x1
+FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1
 ~~~
 
 

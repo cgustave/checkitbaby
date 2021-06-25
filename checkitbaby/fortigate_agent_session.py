@@ -85,6 +85,7 @@ class Mixin:
             rfdb = self._check_session_requirement(name=r['name'], value=r['value'], result=result)
             feedback = feedback and rfdb
         self.add_report_entry(check=check, result=feedback)
+        self.add_report_entry(data=check, result=result)
         return feedback
 
     def _check_session_requirement(self, result={}, name='', value=''):
