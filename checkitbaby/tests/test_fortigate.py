@@ -38,7 +38,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         self.fgt.playbook='test'
         self.fgt.run='1'
         self.fgt.testcase=''
-        self.fgt.name='unitest'
+        self.fgt.name='fgt1'
         self.fgt.conn='0'
         self.fgt.connect(type='fortigate')
 
@@ -46,28 +46,27 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     #@unittest.skip
     def test_get_status(self):
-        result = self.fgt.process(line="FGT-B1-1:1 get status\n")
-        self.assertEqual(result['version'],'v6.4.6,build1879,210520')
-        self.assertTrue(result['license'])
+        result = self.fgt.process(line="FGT-B1-1:1 get system status\n")
+        self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_no_requirement(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_license(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has license=True\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has license=True\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_version(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has version=v6.4.6,build1879,210520\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_check_status_has_license_and_version(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] status has version=v6.4.6,build1879,210520 license=True\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [fgt_status] system status has version=v6.4.6,build1879,210520 license=True\n")
         self.assertTrue(result)
 
     # --- sessions ---
@@ -91,29 +90,34 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     #@unittest.skip
     def test_ping_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 192.168.0.254\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_ping_source_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.168.0.1 192.168.0.254\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_ping_nok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] ping vdom=root 169.255.1.2\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 169.255.1.2\n")
         self.assertFalse(result)
 
     # --- IPsec ----
 
     #@unittest.skip
     def test_ike_status(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root\n")
         self.assertTrue(result)
 
     #@unittest.skip
     def test_ike_status_with_requirements(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ipsec] ipsec ike status vdom=root has ipsec_created=3 ipsec_established=1\n")
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ike_gateway_flush(self):
+        result = self.fgt.process(line="FGT-B1-1:1 flush vdom=root ipsec ike gateway\n")
         self.assertTrue(result)
 
     # --- BGP routes ---
@@ -175,17 +179,17 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- SD-Wan ---
 
-    #@unittest.skip
+    ##@unittest.skip
     def test_sdwan_service(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    ##@unittest.skip
     def test_sdwan_service_requirement_preferred(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has preferred=1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    ##@unittest.skip
     def test_sdwan_service_requirement_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has status=alive\n")
         self.assertTrue(result)
@@ -198,7 +202,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
     #@unittest.skip
     def test_sdwan_service_v62(self):
         # 6.2 should use "diag sys virtual-wan-link and cause an error on 6.4"
-        result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=0x1\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1\n")
         self.assertFalse(result)
 
 if __name__ == '__main__':

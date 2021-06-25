@@ -254,32 +254,35 @@ R1-B1:1 traffic-policy WAN delay 10 loss 0
 
 #### FortiGate
 Interact with FortiGate device, generates test results and retrieve information added to the report.  
-Vdoms are supported.
-
-###### Status
-Status information from FortiGate : firmware and license.  
-
-~~~
-# Check that FGT-B1 VM license is Valid
-FGT-B1-1:1 check [FGT-B1_license] status has license=True
-
-# Get FortiGate firmware version and VM license status
-# Added in the reports as respectively 'version' and 'license'
-FGT-B1-1:1 get status
-~~~
-
-
-###### vdom support
-When a command need to be run inside a vdom, add vdom=VDOM_NAME just after the 1st command keyword.  
-Some examples :
+Vdoms are supported, add keyword vdom=_vdom_name_ in the command line, examples :
 - to check vdom 'customer' has 12 bgp routes with 8 of them recursive routes:  
-  `F1B2:1 check [bgp_routes] bgp vdom=customer has total=12 recursive=8`
+  `F1B2:1 check [bgp_routes] route bgp vdom=customer has total=12 recursive=8`
 
 - to check ssh session exist in vdom customer:  
   `F1B2:1 check [ssh_session_exists] session vdom=customer filter dport=22`
 
 - to check SDWAN member is alive in SDWAN Rule 1 on vdom 'customer':  
   `check [sdwan_service] sdwan vdom=customer service 1 member 1 has status=alive`
+
+Commands are organized in groups: (system, execute, session, ipsec, route, sdwan...)
+described below with their associated command syntax.  
+
+
+##### System
+Commands related to FortiGate system:
+
+###### status:
+~~~
+# Check FGT-B1 VM license is Valid
+FGT-B1-1:1 check [FGT-B1_license] system status has license=True
+
+# Get FortiGate firmware version and VM license status
+# Added in the reports as respectively 'version' and 'license'
+FGT-B1-1:1 get system status
+~~~
+
+##### Execute
+Commands and checks related to Fortigate cli 'execute' commands 
 
 ###### Ping 
 Ping check from the the fortigate itself. Send 5 adaptive pings, test pass if no pings are dropped.  
@@ -296,7 +299,7 @@ Examples:
 	`FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254` 
 
 
-###### Sessions
+##### Session
 
 Checks on FortiGate session table.
 This command has a first **'filter'** section to select the sessions. An implicit 'diag sys session filter clear' is done before the command. Allowed keywords are :  
@@ -314,48 +317,54 @@ FGT-B1-1 check [ssh_session_exist] session filter dport=22 dst=192.168.0.1
 FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 ~~~
 
-###### IPsec tunnel
+##### IPsec
 
-- Generic checks on IPsec based on `diagnose vpn ike status`
+- Generic checks on IPsec `diagnose vpn ike status`
 - flush all ike gateway
 
+###### ike
+Ike related commands based on `diagnose vpn ike status` and `diagnose vpn ike gateway flush`
 ~~~
 # Flush all ike gateways ('diagnose vpn ike gateway flush')
-FGT-B1-1:1 flush ike gateway
+FGT-B1-1:1 flush ipsec ike gateway
 
 # Check number of established ike tunnels
-FGT-B1-1:1 check [B1_tunnels] ike status has ike_established=3
+FGT-B1-1:1 check [B1_tunnels] ipsec ike status has ike_established=3
 
 # Check number of established IPsec tunnels (created and established)
-FGT-B1-1:1 check [B1_tunnels] ike status has ipsec_created=3 ipsec_established=3
+FGT-B1-1:1 check [B1_tunnels] ipsec ike status has ipsec_created=3 ipsec_established=3
 ~~~
 
 
-###### BGP routes
-Checks on routing table BGP from `get router info routing-table bgp`
-Add vdom=_vdom_name_ after bgp keyword if vdoms are used
+##### route
+Commands related to fortigate routing table.
+
+###### BGP:
+Checks on routing table BGP from `get router info routing-table bgp`.  
+Examples:
 ~~~
-# number of bgp routes is 4 :
+# number of bgp routes in vdom root is 4:
 FGT-B1-1 check [bgp_4_routes] route bgp vdom=root has total=4
 
-# bgp route for subnet 10.0.0.0/24 exist :
+# at least 1 bgp route for subnet 10.0.0.0/24 exists:
 FGT-B1-1 check [bgp_subnet_10.0.0.0] route bgp has subnet=10.0.0.0/24
 
-# bgp nexthop 10.255.1.253 exist
+# at least 1 bgp route with nexthop 10.255.1.253 exists:
 FGT-B1-1 check [bgp_nexthop_10.255.1.253] route bgp has nexthop=10.255.1.253
 
-# bgp has route toward interface vpn_mpls
+# at least 1 bgp route toward interface vpn_mpls exists:
 FGT-B1-1 check [bgp_subnet_10.0.0.0] route bgp has interface=vpn_mpls
 
-# multiple requirements can be combined
+# multiple requirements may be combined:
 FGT-B1-1 check [multi] route bgp has nexthop=10.255.1.253 nexthop=10.255.2.253 subnet=10.0.0.0/24
 FGT-A1:1 check [mutli] route bgp has subnet=10.0.0.0/24 next-hop=1.1.1.1 interface=port1
 ~~~
 
-###### SD-WAN
+##### SD-WAN
 
 Various checks from `diagnose sys sdwan service <SERVICE>`  
-For v6.2 version, make sure to add version=6.2 (to use old diag command diag sys virtual-wan-link).
+For v6.2 version, make sure to add version=6.2 at the end of the line or before the requirements (has)
+This would make use of old diag command 'diag sys virtual-wan-link'.
 
 ~~~
 # check alive members :
@@ -368,7 +377,7 @@ FGT-B1-1 check [sdwan_1_member1_sla] sdwan service 1 member 1 has sla=0x1
 FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 
 # Check on a v6.2 version
-FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=0x1
+FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1
 ~~~
 
 
@@ -377,7 +386,7 @@ FGT-B1-1:1 check [sdwan] sdwan vdom=root version=6.2 service 1 member 1 has sla=
 Interact with FortiPoC to bring ports up or down
 Using fpoc link up/down __device__ __port__
 
-###### link up / link down
+##### link up / link down
 ~~~
 # Bring up link for FGT-B1-port1 switch side
 fpoc:1 link up FGT-B1-1 port1
@@ -392,7 +401,7 @@ fpoc:1 link down FGT-B1-1 port1
 Interact with FortiSwitch (hardware or VM) to bring ports admin up or down
 Check status of a port1 and eventually expect a certain state
 
-###### link up / link down
+##### link up / link down
 ~~~
 # Bring port admin up
 fsw:1 port up port10
@@ -401,7 +410,7 @@ fsw:1 port up port10
 fsw:1 port down port10
 ~~~
 
-###### check port link status
+##### check port link status
 ~~~
 # Check to get port status for record only purpose
 fsw:1 check [status_port10] port status port10

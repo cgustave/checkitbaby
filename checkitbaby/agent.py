@@ -123,13 +123,42 @@ class Agent(object):
         log.debug("type={} filename={}".format(type, filename))
         return(filename)
 
-    def add_report_entry(self, check="", get="", result=""):
+    def parse_line(self, line=''):
+        """
+        Parses agent line to extract required information common to all agents
+        Returns a dictionary of line elements
+        Generate ERROR and exit in case of syntax errors
+        """
+        log.info("Enter with line={}".format(line))
+        match = re.search("(\s|\t)*(?P<agent>[A-Za-z0-9\-_]+):(?P<conn>\d+)(\s|\t)+(?P<type>get|check|flush)(\s|\t)*(?P<check>\[\S+\])?(\s|\t)*(?P<group>[A-Za-z-]+)(\s|\t)*(?P<command>[A-Za-z-]+)",line)
+        if match:
+            agent = match.group('agent')
+            conn = match.group('conn')
+            type = match.group('type')
+            check = match.group('check')
+            # Remove [ ] from check
+            if check:
+                match_check = re.search('\[(?P<check>\S+)\]', check)
+                if match_check:
+                    check = match_check.group('check')
+            group = match.group('group')
+            command = match.group('command')
+            log.debug("Matched with agent={} conn={} type={} check={} group={} command={}".format(agent, conn, type, check, group, command))
+        else:
+            log.error("Syntax error: could not extract agent, connection or command from {}".format(line))
+            raise SystemExit
+        return { 'agent': agent, 'conn': conn, 'type': type, 'check': check, 'group': group, 'command': command }
+
+    def add_report_entry(self, check="", get="", data="", result=""):
         """
         Adds an entry in the report.
         For a check entry, call with check=check_name, result=pass|fail
-        Update the testcase generic result
+        Update the testcase generic result.
+        get: from 'get' commands (like get system status)
+        check: the subkey is the check name (in brackets in the line), value is True for a Pass and False for a Fail.
+        data: same subkey as the check command. Key 'data' is used to store additional information gathere during a check.
         """
-        log.info("Enter with check={} get={} result={}".format(check, get, result))
+        log.info("Enter with check={} get={} data={} result={}".format(check, get, data, result))
 
         # Create playbook result if needed
         if 'result' not in self.report:
@@ -154,7 +183,10 @@ class Agent(object):
         if 'get' not in self.report['testcases'][self.testcase]:
             self.report['testcases'][self.testcase]['get'] = {}
 
-        # Add check report entry
+        # Create 'data' group if needed
+        if 'data' not in self.report['testcases'][self.testcase]:
+            self.report['testcases'][self.testcase]['data'] = {}
+
         if check:
             log.debug("Adding check={} result={} in testcase={}".format(check, result, self.testcase))
             self.report['testcases'][self.testcase]['check'][check] = result
@@ -168,6 +200,10 @@ class Agent(object):
             tr = self.report['testcases'][self.testcase]['result'] and result
             self.report['testcases'][self.testcase]['result'] = tr
             log.debug("Testcase result updated with result={}".format(tr))
+
+        if data:
+            log.debug("Adding data={} result={} in testcase={}".format(data, result, self.testcase))
+            self.report['testcases'][self.testcase]['data'][data] = result
 
         # Add get report entry for the given agent
         if get:
@@ -276,6 +312,50 @@ class Agent(object):
         else:
             log.debug("dryrun mode")
         return success
+
+    def get_requirements(self, line=""):
+        """
+        Returns a list of key/value pairs corresponding to the requirement list.
+        Requirements are expressed as key=value separated by spaces, after keyword 'has'
+        """
+        log.info("Enter with line={}".format(line))
+        reqlist = []
+        match_has = re.search("\s+has\s+(?P<requirements>.+)",line)
+        if match_has:
+            requirements = match_has.group('requirements')
+            log.debug("requirements string {}".format(requirements))
+            nb = 0
+            for r in requirements.split():
+                nb = nb + 1
+                log.debug("requirement nb={} string={}".format(nb, r))
+                match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
+                if match_req:
+                    rname = match_req.group('rname')
+                    rvalue = match_req.group('rvalue')
+                    reqlist.append({ 'name': rname, 'value': rvalue })
+                else:
+                    log.error("Syntax error : failed to extract requirement from {}".value(r))
+                    raise SystemExit
+        else:
+            log.debug("no requirements found")
+        return reqlist
+
+    def check_requirement(self, result={}, name='', value=''):
+        """
+        Validates the given requirement.
+        Returns true if the name/value pair received exists in result dictionary
+        """
+        log.info("Enter with name={} value={} result={}".format(name, value, result))
+        fb = True  # by default, requirement is met
+        if not name in result:
+            log.warning("requirement name={} is not in result={}".format(name, result))
+            return False
+        elif str(result[name]) == str(value):
+            log.debug("{}={} requirement is met".format(name, value))
+            return True
+        else:
+            log.debug("{}={} requirement is not met".format(name, value))
+            return False
 
     def close(self):
         """
