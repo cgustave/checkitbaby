@@ -34,7 +34,7 @@ class Agent(object):
         This method is not overwritten and called systematically for all agents
         """
         log.info("Enter with line={}".format(line))
-
+        result = False
         # Sanity checks
         if self.path == None:
             log.error("Undefined path")
@@ -48,21 +48,18 @@ class Agent(object):
             log.error("Undefined run")
             raise SystemExit
         log.debug("Our attributs : path={} playbook={} run={}".format(self.path, self.playbook, self.run))
-
         # Generic commands : 'mark'
         match = re.search("(?:(\s|\t)*[A-Za-z0-9\-_]+:\d+(\s|\t)+)(?P<command>[A-Za-z]+)",line)
-
         if match:
             command = match.group('command')
             log.debug("Matched with command={}".format(command))
         else:
             log.debug("No command has matched")
-
         if command == "mark":
-            self.process_mark(line=line)
+            result = self.process_mark(line=line)
 
         # returning translated line
-        return line
+        return result
 
     def process_mark(self, line=""):
         """
@@ -85,8 +82,10 @@ class Agent(object):
                 self._ssh.trace_mark(message)
             else:
                 log.debug("dry-run - fake marking : {}".format(message))
+            return True
         else:
            log.debug("could not extract mark message")
+           return False
 
     def process(self, line=""):
         """

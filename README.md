@@ -203,11 +203,10 @@ clt-1:2 ping [fail_delay_conntest] $google_dns$ maxdelay 10
 
 ###### connection test
 
-  Connection (UDP or TCP) one way or two-way test.  
-  Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
-  Connectivity test is using netcat-openbsd package *which has a different syntax than netcat-traditional to specify listening port*.  
-  Make sure netcat-openbsd is installed otherwise server would listen on a random port (netcat-traditional is expecting -l -p PORT whild bsd wants -l PORT
-
+Connection (UDP or TCP) one way or two-way test.  
+Open, connect, close connections and send data. It is recommended to use 'marks' to limit the check parsing area.
+Connectivity test is using netcat-openbsd package *which has a different syntax than netcat-traditional to specify listening port*.  
+Make sure netcat-openbsd is installed otherwise server would listen on a random port (netcat-traditional is expecting -l -p PORT whild bsd wants -l PORT
 
 ~~~
 # Open a tcp server on port 8000  on agent LXC-1 from its connection 1
@@ -220,7 +219,7 @@ LXC-1:1 mark "server ready"
 LXC-2:1 connect tcp 10.0.2.1 8000
 
 # Send data string 'alice' on tcp connection from client side
-LXC-2:1 data send "alice"
+LXC-2:1 send "alice"
 
 # Check data 'alice' is received server. Test is called '1_traffic_origin_direction'
 # Parsing on server log file starts at mark "server ready"
@@ -230,7 +229,7 @@ LXC-1:1 check [1_traffic_origin_direction] data receive "alice" since "server re
 LXC-2:1 mark "client ready"
 
 # Send data string 'bob' on tcp connection from server side:
-LXC-1:1 data send "bob"
+LXC-1:1 send "bob"
 
 # Check data 'bob' is received on client. Test is called '2_traffic_reply_direction'
 # Search scope on client log file start at mark "client ready"
@@ -238,6 +237,29 @@ LXC-2:1 check [2_traffic_reply_direction] data receive "bob" since "client ready
 
 # Close tcp socket from client side:
 LXC-1:1 close tcp
+~~~
+
+###### Multicast tests
+
+Mutlicast test tools.  
+Requires packages : hping3, smcroute, netcat-openbsd  
+Agent can join or leave a multicast group, listen, send some message and check message has been received on receiver.  
+
+~~~
+# Join multicast group 239.1.1.1 from interface eth1
+lxc22:1 join multicast eth1 239.1.1.1
+
+# Listen multicast group 239.1.1.1 on port 5000
+lxc22:1 listen multicast 239.1.1.1 port 5000
+
+# Send a udp mutlicast message "hihihi" to group 239.1.1.1 from source port 10000 to destination port 5000 
+lxc12:1 send multicast 239.1.1.1 sport 10000 dport 5000 "hihihi"
+
+# Check message hihihi has been seen on the receiver
+lxc22:1 check [mctest] "hihihi
+
+# Leave multicast group 239.1.1.1 from interface eth1
+lxc22:1 leave multicast eth1 239.1.1.1
 ~~~
 
 
