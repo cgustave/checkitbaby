@@ -402,7 +402,7 @@ FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1
 ~~~
 
-#### multicast
+#### Multicast
 
 Checks on multicast from :
  `get router info multicast igmp groups`
@@ -410,6 +410,9 @@ Checks on multicast from :
 ~~~
 # get multicast groups without requirements on vdom named 'multicast'
 FGT-B1-1 check [igmp_groups] multicast igmp groups
+
+# check group 239.0.0.1 is known from igmp
+FGT-B1-1 check [igmp_groups] multicast igmp groups has group=239.0.0.1
 ~~~
 
 
