@@ -252,7 +252,7 @@ lxc22:1 join multicast eth1 239.1.1.1
 # Listen multicast group 239.1.1.1 on port 5000
 lxc22:1 listen multicast 239.1.1.1 port 5000
 
-# Send a udp mutlicast message "hihihi" to group 239.1.1.1 from source port 10000 to destination port 5000 
+# Send a udp mutlicast message "hihihi" to group 239.1.1.1 from source port 10000 to destination port 5000
 lxc12:1 send multicast 239.1.1.1 sport 10000 dport 5000 "hihihi"
 
 # Check message hihihi has been seen on the receiver
@@ -304,9 +304,9 @@ FGT-B1-1:1 get system status
 ~~~
 
 ##### Execute
-Commands and checks related to Fortigate cli 'execute' commands 
+Commands and checks related to Fortigate cli 'execute' commands
 
-###### Ping 
+###### Ping
 Ping check from the the fortigate itself. Send 5 adaptive pings, test pass if no pings are dropped.  
 Possible options: vdom=_vdom_name_ source=_source_ip_  
 Packets transmited, received and dropped are added in the report.  
@@ -318,7 +318,7 @@ Examples:
 	`FGT-B1-1:1 check [ping_test] ping vdom=root 192.168.0.254`
 
 - using a specific source-ip address:  
-	`FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254` 
+	`FGT-B1-1:1 check [ping_test] ping vdom=root source=192.168.0.1 192.168.0.254`
 
 
 ##### Session
@@ -400,6 +400,16 @@ FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 
 # Check on a v6.2 version
 FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1
+~~~
+
+#### multicast
+
+Checks on multicast from :
+ `get router info multicast igmp groups`
+
+~~~
+# get multicast groups without requirements on vdom named 'multicast'
+FGT-B1-1 check [igmp_groups] multicast igmp groups
 ~~~
 
 

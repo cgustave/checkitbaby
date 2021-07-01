@@ -343,32 +343,32 @@ class Lxc_agent(Agent):
             group = match1.group('group')
             log.debug("type={} dev={} group={}".format(type, dev, group))
             if type == 'join':
-                result = self.cmd_multicast_group(line=line, action='join', dev=dev, group=group)
+                result = self.cmd_multicast_group(action='join', dev=dev, group=group)
             elif type == 'leave':
-                result = self.cmd_multicast_group(line=line, action='leave', dev=dev, group=group)
+                result = self.cmd_multicast_group(action='leave', dev=dev, group=group)
         elif match2:
              group = match2.group('group')
              port = match2.group('port')
-             result = self.cmd_multicast_listen(line=line, group=group, port=port)
+             result = self.cmd_multicast_listen(group=group, port=port)
         elif match3:
             group = match3.group('group')
             sport = match3.group('sport')
             dport = match3.group('dport')
             message = match3.group('message')
-            result = self.cmd_multicast_send(line=line, group=group, sport=sport, dport=dport, message=message)
+            result = self.cmd_multicast_send(group=group, sport=sport, dport=dport, message=message)
         else:
             log.error("Could not recognize multicast command syntax in line={}".format(line))
             raise SystemExit
         return result
 
-    def cmd_multicast_group(self, line='', action='', group='', dev=''):
+    def cmd_multicast_group(self, action='', group='', dev=''):
         """
         Join or leave a mutlicast group
         uses smcroute on the client, ex:
           smcroute -j eth1 239.1.1.1
           smcroute -l eth1 239.1.1.1
         """
-        log.info("Enter with action={} group={} dev={} line={}".format(action, group, dev, line))
+        log.info("Enter with action={} group={} dev={}".format(action, group, dev))
         result = False
         option = 'h'
         if action == 'join':
@@ -389,13 +389,13 @@ class Lxc_agent(Agent):
         return True
         return result
 
-    def cmd_multicast_listen(self, line="", group="", port=""):
+    def cmd_multicast_listen(self, group="", port=""):
         """
         List a mutlicast address/port.
         Uses netcat
         nc -l -u 239.1.1.1 1000
         """
-        log.info("Enter with group={} port={} line={}".format(group, port, line))
+        log.info("Enter with group={} port={}".format(group, port))
         if not self._connected:
             log.debug("Connection to agent needed agent={} conn={}".format(self.name, self.conn))
             self.connect(type='lxc')
@@ -407,13 +407,13 @@ class Lxc_agent(Agent):
         return True
         return result
 
-    def cmd_multicast_send(self, line='', group='', sport='', dport='', message=''):
+    def cmd_multicast_send(self, group='', sport='', dport='', message=''):
         """
         Sends a message in udp multicast
         Uses hping3
         hping3 --udp 239.1.1.1 -t 32 -k -p 1000 -d 10 -c 10 --faster
         """
-        log.info("Enter with group={} sport={} dport={} message={} line={}".format(group, sport, dport, message, line))
+        log.info("Enter with group={} sport={} dport={} message={}".format(group, sport, dport, message))
         message = message + "\n"
         result = False
         len_message = len(message)

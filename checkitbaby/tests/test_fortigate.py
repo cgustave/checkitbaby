@@ -11,6 +11,7 @@ Fortgate Agent unittest to be run agains test FortiPoC "checkitbaby_tests"
 import logging as log
 import unittest
 from fortigate_agent import Fortigate_agent
+from lxc_agent import Lxc_agent
 
 # create logger
 log.basicConfig(
@@ -29,7 +30,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         self.fgt = Fortigate_agent(debug=True)
         # Connection details
         self.fgt.agent['ip'] = '192.168.122.178'
-        self.fgt.agent['port'] = '10101'
+        self.fgt.agent['port'] = '10106'
         self.fgt.agent['login'] = 'admin'
         self.fgt.agent['password'] = ''
         self.fgt.agent['ssh_key_file'] = ''
@@ -41,6 +42,23 @@ class Fortigate_agentTestCase(unittest.TestCase):
         self.fgt.name='fgt1'
         self.fgt.conn='0'
         self.fgt.connect(type='fortigate')
+
+
+    def setup_lxc12(self):
+        self.lxc12 = Lxc_agent(debug=True)
+        self.lxc12.agent['ip'] = '192.168.122.178'
+        self.lxc12.agent['port'] = '10102'
+        self.lxc12.agent['login'] = 'root'
+        self.lxc12.agent['password'] = 'fortinet'
+        self.lxc12.agent['ssh_key_file'] = ''
+        self.lxc12.path='/home/cgustave/github/python/packages/checkitbaby/checkitbaby/tests/playbooks'
+        self.lxc12.playbook='test'
+        self.lxc12.run='1'
+        self.lxc12.testcase=''
+        self.lxc12.name='lxc12'
+        self.lxc12.conn='1'
+        self.lxc12.connect(type='lxc')
+
 
     # --- status ---
 
@@ -81,7 +99,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 dst=192.168.0.1\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    ##@unittest.skip
     def test_session_dport_has_state_local(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 has state=local\n")
         self.assertTrue(result)
@@ -93,9 +111,9 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
-    #@unittest.skip
+    ##@unittest.skip
     def test_ping_source_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.168.0.1 192.168.0.254\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.2.0.1 192.2.0.2\n")
         self.assertTrue(result)
 
     #@unittest.skip
@@ -129,7 +147,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     #@unittest.skip
     def test_route_bpg_has_total_2_ok(self):
-        result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=2\n")
+        result = self.fgt.process(line="FGT-B1-1:1 check [route_bgp] route bgp vdom=root has total=4\n")
         self.assertTrue(result)
 
     #@unittest.skip
@@ -179,17 +197,17 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     # --- SD-Wan ---
 
-    ##@unittest.skip
+    #@unittest.skip
     def test_sdwan_service(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1\n")
         self.assertTrue(result)
 
-    ##@unittest.skip
+    #@unittest.skip
     def test_sdwan_service_requirement_preferred(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has preferred=1\n")
         self.assertTrue(result)
 
-    ##@unittest.skip
+    #@unittest.skip
     def test_sdwan_service_requirement_status(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 has status=alive\n")
         self.assertTrue(result)
@@ -204,6 +222,34 @@ class Fortigate_agentTestCase(unittest.TestCase):
         # 6.2 should use "diag sys virtual-wan-link and cause an error on 6.4"
         result = self.fgt.process(line="FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1\n")
         self.assertFalse(result)
+
+    # --- Multicast ---
+
+    #@unittest.skip
+    def test_multicast_igmp_group_join_ok(self):
+        # The following test requires LXC12 up and running
+        self.setup_lxc12()
+        self.lxc12.cmd_multicast_group(action='join', group='239.0.0.1', dev='eth1')
+        result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups\n")
+        self.lxc12.cmd_multicast_group(action='leave', group='239.0.0.1', dev='eth1')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_multicast_igmp_group_join_requirements_ok(self):
+        # The following test requires LXC12 up and running
+        self.setup_lxc12()
+        self.lxc12.cmd_multicast_group(action='join', group='239.0.0.1', dev='eth1')
+        result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups has group=239.0.0.1\n")
+        self.assertTrue(result)
+        result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups has group=242.0.0.1\n")
+        self.assertFalse(result)
+        self.lxc12.cmd_multicast_group(action='leave', group='239.0.0.1', dev='eth1')
+
+    #@unittest.skip
+    def test_multicast_igmp_group_no_group_fails(self):
+        result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups\n")
+        self.assertFalse(result)
+
 
 if __name__ == '__main__':
     unittest.main()

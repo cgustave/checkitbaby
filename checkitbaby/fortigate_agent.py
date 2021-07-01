@@ -12,11 +12,14 @@ import fortigate_agent_route
 import fortigate_agent_sdwan
 import fortigate_agent_session
 import fortigate_agent_system
+import fortigate_agent_multicast
+
 
 # Note: Mixin is a class with only methods.
 # it is used to split the class in multiple sub modules with methods only
 class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execute.Mixin, fortigate_agent_route.Mixin,
-                      fortigate_agent_sdwan.Mixin, fortigate_agent_session.Mixin, fortigate_agent_system.Mixin):
+                      fortigate_agent_sdwan.Mixin, fortigate_agent_session.Mixin, fortigate_agent_system.Mixin,
+                      fortigate_agent_multicast.Mixin):
     """
     Fortigate specific agent
     To avoid ssh connection issues because of key change, it is recommended to use a ssh key to connect to FortiGate
@@ -97,6 +100,8 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
             result = self.process_route(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'sdwan':
             result = self.process_sdwan(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
+        elif data['group'] == 'multicast':
+            result = self.process_multicast(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         else:
             log.error("Syntax error: unknown command group {}".format(data['command']))
             raise SystemExit
@@ -136,12 +141,10 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         Enters vdom specified in self.vdom
         """
         log.info("Enter having vdom={}".format(self._vdom))
-
         self.connect_if_needed()
         result = self._ssh.enter_vdom(vdom=self._vdom)
-
         if not result:
-            log.error("Could not enter vdom {}".format(vdom))
+            log.error("Could not enter vdom {}".format(self._vdom))
             raise SystemExit
 
     def cmd_enter_global(self):
@@ -149,10 +152,8 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         Enters in global section
         """
         log.info("Enter")
-
         self.connect_if_needed()
         result = self._ssh.enter_global()
-
         if not result:
             log.error("Could not enter global section")
             raise SystemExit
@@ -162,7 +163,6 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
         Leaves vdom
         """
         log.info("Enter")
-
         self.connect_if_needed()
         #result = self._ssh.leave_vdom()
         result = self._ssh.ssh.shell_send(["end\n"])
