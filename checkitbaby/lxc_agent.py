@@ -411,7 +411,7 @@ class Lxc_agent(Agent):
         """
         Sends a message in udp multicast
         Uses hping3
-        hping3 --udp 239.1.1.1 -t 32 -k -p 1000 -d 10 -c 10 --faster
+        echo "message" | hping3 --udp 239.1.1.1 -t 32 -s 10000 -p 5000 -k -d 10 -c 1 -E /dev/stdin --faster
         """
         log.info("Enter with group={} sport={} dport={} message={}".format(group, sport, dport, message))
         message = message + "\n"

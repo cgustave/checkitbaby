@@ -23,6 +23,8 @@ class Mixin:
         log.info("Enter with agent={} conn={} type={} check={} command={} line={} ".format(agent, conn, type, check, command, line))
         if command == 'groups' and type == 'check':
             result = self.cmd_check_multicast_igmp(check=check ,line=line)
+        elif command == 'mroute' and type == 'check':
+            result = self.cmd_check_multicast_mroute(check=check ,line=line)
         else:
             log.error("Syntax error: command {} unknown".format(command))
             raise SystemExit
@@ -61,6 +63,41 @@ class Mixin:
         self.add_report_entry(check=check, result=feedback)
         self.add_report_entry(data=check, result=groups)
         return feedback
+
+    def cmd_check_multicast_mroute(self, check='', line=''):
+        """
+        Check multicast mroute
+        Based on 'diag ip multicast mroute', ex :
+        FGT-B2-9 (multicast) # diagnose ip multicast mroute
+        grp=239.1.1.1 src=10.1.1.12 intf=8 flags=(0x10000000)[  ] status=resolved
+                last_assert=1410655 bytes=76 pkt=2 wrong_if=0 num_ifs=1
+                index(ttl)=[9(1),]
+
+        FGT-B2-9 (multicast) #
+        """
+        log.info("Enter with check={} line={}".format(check, line))
+        flag_found = False
+        mroutes = []
+        if not self.dryrun:
+            cmd = "diagnose ip multicast mroute\n"
+            self._ssh.ssh.shell_send([cmd])
+            for l in self._ssh.ssh.output.splitlines():
+                log.debug("l={}".format(l))
+                match = re.search("^grp=(?P<grp>[0-9.]+)(\s|\t)+src=(?P<src>[0-9.]+)(\s|\t)+intf=(?P<intf>\d+)",l )
+                if match:
+                    flag_found = True
+                    grp = match.group('grp')
+                    src = match.group('src')
+                    intf=match.group('intf')
+                    log.debug("grp={} src={} intf={}".format(grp, src, intf))
+                    mroutes.append({'grp': grp, 'src': src, 'intf': intf})
+
+        # Processing further requirements (has ...)
+        self.add_report_entry(data=check, result=mroutes)
+        feedback = flag_found
+        return feedback
+
+
 
     def check_igmp_groups_requirement(self, name='', value='', groups=[]):
         """

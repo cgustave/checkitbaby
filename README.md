@@ -402,10 +402,11 @@ FGT-B1-1 check [sdwan_1_preferred] sdwan service 1 member 1 has preferred=1
 FGT-B1-1:1 check [sdwan] sdwan vdom=root service 1 member 1 version=6.2 has sla=0x1
 ~~~
 
-#### Multicast
+##### Multicast
 
-Checks on multicast from :
+Checks on multicast for IGMP groups and mroutes from:
  `get router info multicast igmp groups`
+ `diag ip multicast mroute`
 
 ~~~
 # get multicast groups without requirements on vdom named 'multicast'
@@ -413,6 +414,30 @@ FGT-B1-1 check [igmp_groups] multicast igmp groups
 
 # check group 239.0.0.1 is known from igmp
 FGT-B1-1 check [igmp_groups] multicast igmp groups has group=239.0.0.1
+
+# check at least 1 multicast route exists on vdom
+FGT-B1-1 check [mroute] multicast vdom=multicast mroute
+
+# check a specific multicast mroute 239.1.1.1 exists on the vdom
+FGT-B1-1 check [mroute] multicast vdom=multicast mroute has group=239.1.1.1
+
+# check a specific multicast mroute 239.1.1.1 exists on the vdom from source 10.1.1.12
+FGT-B1-1 check [mroute] multicast vdom=multicast mroute has group=239.1.1.1 source=10.1.1.12
+~~~
+
+
+##### BFD
+
+Checks on BFD for neighbors states
+ `get router info bfd neighbor`
+
+~~~
+# get bfd neighbor without requirements on vdom named 'bfd'
+# returns True if the given neighbor is found (in whichever state)
+FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9
+
+# check neighbor 172.17.18.9 exists and is in state UP
+FGT-B1-1:1 check [bfd_neighbor_up] bfd vdom=bfd neighbor 172.18.1.9 has state=up
 ~~~
 
 

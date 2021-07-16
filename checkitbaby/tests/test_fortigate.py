@@ -99,7 +99,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 dst=192.168.0.1\n")
         self.assertTrue(result)
 
-    ##@unittest.skip
+    #@unittest.skip
     def test_session_dport_has_state_local(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [session_ssh] session vdom=root filter dport=22 has state=local\n")
         self.assertTrue(result)
@@ -111,7 +111,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root 192.168.0.254\n")
         self.assertTrue(result)
 
-    ##@unittest.skip
+    #@unittest.skip
     def test_ping_source_ok(self):
         result = self.fgt.process(line="FGT-B1-1:1 check [ping_test] execute ping vdom=root source=192.2.0.1 192.2.0.2\n")
         self.assertTrue(result)
@@ -236,7 +236,7 @@ class Fortigate_agentTestCase(unittest.TestCase):
 
     #@unittest.skip
     def test_multicast_igmp_group_join_requirements_ok(self):
-        # The following test requires LXC12 up and running
+        """Requires LXC12 up and running"""
         self.setup_lxc12()
         self.lxc12.cmd_multicast_group(action='join', group='239.0.0.1', dev='eth1')
         result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups has group=239.0.0.1\n")
@@ -250,6 +250,26 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [igmp_join] multicast vdom=multicast groups\n")
         self.assertFalse(result)
 
+    #@unittest.skip
+    def test_multicast_mroute_ok(self):
+        """
+        Checking on FHR, no need join, just push multicast traffic
+        Requires lxc12 up and running
+        """
+        self.setup_lxc12()
+        self.lxc12.cmd_multicast_send(group='239.1.1.1', sport=10000, dport=5000, message='hello')
+        result = self.fgt.process(line="FGT-B1-1:1 check [mroute] multicast vdom=multicast mroute\n")
+        self.assertFalse(result)
+
+    #@unittest.skip
+    def test_bfd_neighbor_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_bfd_neighbor_state_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9 has state=up\n')
+        self.assertTrue(result)
 
 if __name__ == '__main__':
     unittest.main()
