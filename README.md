@@ -344,7 +344,7 @@ FGT-B1-1 check [session_is_dirty] session filter dport=5000 has state=dirty
 - Generic checks on IPsec `diagnose vpn ike status`
 - flush all ike gateway
 
-###### ike
+###### IKE
 Ike related commands based on `diagnose vpn ike status` and `diagnose vpn ike gateway flush`
 ~~~
 # Flush all ike gateways ('diagnose vpn ike gateway flush')
@@ -439,6 +439,45 @@ FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9
 # check neighbor 172.17.18.9 exists and is in state UP
 FGT-B1-1:1 check [bfd_neighbor_up] bfd vdom=bfd neighbor 172.18.1.9 has state=up
 ~~~
+
+##### HA
+
+Checks on HA status: `get system ha status` (in global)
+  - checks ha report unit healthy (HA Health Status: OK)
+  - checks if unit with the given hostname is master of slave  ()
+  - checks how many unit seen in the cluster
+  - Checks if a given serial number is know in the cluster
+  - checks if all members have their configuration synchronized (configuration status -> in-sync)
+
+~~~
+# check HA status reports health is OK
+FGT-B1-1:1 check [ha_health] ha status has health=ok
+
+# check if unit with name FGT-B1-1 is master
+FGT-B1-1:1 check [ha_is_master] ha status has master=FGT-B1-1
+
+# check if unit with name FGT-B1-2 is slave
+FGT-B1-2:1 check [ha_is_slave] ha status has slave=FGT-B1-2
+
+# check number of devices reported is 2 devices  
+FGT-B1-1:1 check [ha_nb] ha status has nb=2
+
+# check ha device with given serial is seen in cluster
+FGT-B1-1:1 check [ha_nb] ha status has serial=FGVM08TM20005010 serial=FGVM08TM20005011
+
+# check all devices reported have their config in-sync
+FGT-B1-1:1 check [ha_sync] ha status has config=synchronized
+
+# Example of check with combined requirements (all need to pass)
+FGT-B1-1:1 check [ha_nb] ha status has master=FGT-B1-1 slave=FGT-B1-2 nb=2 config=synchronized serial=FGVM08TM20005010 serial=FGVM08TM20005011 health=ok
+~~~
+
+HA related actions: `diagnose sys ha reset-uptime`
+  - reset ha uptime
+~~~
+# Reset unit ha uptime
+FGT-B1-1:1 ha reset-uptime
+~~~  
 
 
 #### FortiPoC

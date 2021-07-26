@@ -14,13 +14,14 @@ import fortigate_agent_session
 import fortigate_agent_system
 import fortigate_agent_multicast
 import fortigate_agent_bfd
+import fortigate_agent_ha
 
 
 # Note: Mixin is a class with only methods.
 # it is used to split the class in multiple sub modules with methods only
 class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execute.Mixin, fortigate_agent_route.Mixin,
                       fortigate_agent_sdwan.Mixin, fortigate_agent_session.Mixin, fortigate_agent_system.Mixin,
-                      fortigate_agent_multicast.Mixin, fortigate_agent_bfd.Mixin):
+                      fortigate_agent_multicast.Mixin, fortigate_agent_bfd.Mixin, fortigate_agent_ha.Mixin):
     """
     Fortigate specific agent
     To avoid ssh connection issues because of key change, it is recommended to use a ssh key to connect to FortiGate
@@ -105,6 +106,8 @@ class Fortigate_agent(Agent, fortigate_agent_ipsec.Mixin, fortigate_agent_execut
             result = self.process_multicast(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         elif data['group'] == 'bfd':
             result = self.process_bfd(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
+        elif data['group'] == 'ha':
+            result = self.process_ha(line=line, agent=data['agent'], conn=data['conn'], type=data['type'], check=data['check'], command=data['command'])
         else:
             log.error("Syntax error: unknown command group {}".format(data['command']))
             raise SystemExit

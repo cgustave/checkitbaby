@@ -129,7 +129,7 @@ class Agent(object):
         Generate ERROR and exit in case of syntax errors
         """
         log.info("Enter with line={}".format(line))
-        match = re.search("(\s|\t)*(?P<agent>[A-Za-z0-9\-_]+):(?P<conn>\d+)(\s|\t)+(?P<type>get|check|flush)(\s|\t)*(?P<check>\[\S+\])?(\s|\t)*(?P<group>[A-Za-z-]+)(\s|\t)*(?P<command>[A-Za-z-]+)",line)
+        match = re.search("(\s|\t)*(?P<agent>[A-Za-z0-9\-_]+):(?P<conn>\d+)(\s|\t)+(?P<type>get|check|flush)?(\s|\t)*(?P<check>\[\S+\])?(\s|\t)*(?P<group>[A-Za-z-]+)(\s|\t)*(?P<command>[A-Za-z-]+)",line)
         if match:
             agent = match.group('agent')
             conn = match.group('conn')
@@ -326,7 +326,7 @@ class Agent(object):
             nb = 0
             for r in requirements.split():
                 nb = nb + 1
-                log.debug("requirement nb={} string={}".format(nb, r))
+                log.debug("requirement nb={} string:{}".format(nb, r))
                 match_req = re.search("^(?P<rname>.+)=(?P<rvalue>.+)", r)
                 if match_req:
                     rname = match_req.group('rname')

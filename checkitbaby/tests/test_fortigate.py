@@ -261,6 +261,8 @@ class Fortigate_agentTestCase(unittest.TestCase):
         result = self.fgt.process(line="FGT-B1-1:1 check [mroute] multicast vdom=multicast mroute\n")
         self.assertFalse(result)
 
+    # --- BFD ---
+
     #@unittest.skip
     def test_bfd_neighbor_ok(self):
         result = self.fgt.process(line='FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9\n')
@@ -270,6 +272,54 @@ class Fortigate_agentTestCase(unittest.TestCase):
     def test_bfd_neighbor_state_ok(self):
         result = self.fgt.process(line='FGT-B1-1:1 check [bfd_neighbors] bfd vdom=bfd neighbor 172.18.1.9 has state=up\n')
         self.assertTrue(result)
+
+    # --- HA ---
+
+    #@unittest.skip
+    def test_ha_status_no_requirement(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_health] ha status\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_health_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_health] ha status has health=ok\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_master_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_is_master] ha status has master=FGT-B1-1\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_slave_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_is_slave] ha status has slave=FGT-B1-2\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_nb_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_nb] ha status has nb=2\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_confsync_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_nb] ha status has config=synchronized\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_requirement_serial_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_nb] ha status has serial=FGVM08TM20005010 serial=FGVM08TM20005011\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_status_multi_requirement_ok(self):
+        result = self.fgt.process(line='FGT-B1-1:1 check [ha_nb] ha status has master=FGT-B1-1 slave=FGT-B1-2 nb=2 config=synchronized serial=FGVM08TM20005010 serial=FGVM08TM20005011 health=ok\n')
+        self.assertTrue(result)
+
+    #@unittest.skip
+    def test_ha_reset_uptime(self):
+        result = self.fgt.process(line='FGT-B1-1:1 ha reset-uptime\n')
+        self.assertTrue(result)
+
 
 if __name__ == '__main__':
     unittest.main()
