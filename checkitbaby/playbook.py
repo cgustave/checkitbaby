@@ -507,7 +507,7 @@ class Playbook(object):
             elif type == "fortigate":
                 self.agents_connections[name][conn] = Fortigate_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             elif type == "fortiswitch":
-                self.agents_connections[name][conn] = Fortiswitch_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug))
+                self.agents_connections[name][conn] = Fortiswitch_agent(name=name, conn=conn, dryrun=self.dryrun, debug=self.debug)
             else:
                 print ("Error: undefined type for agent {}".format(type))
                 raise SystemExit
