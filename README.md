@@ -184,6 +184,12 @@ wait 30
 
 #### Debian LXC
 
+###### Requirements
+
+Install the following package :
+`apt-get install hping3 iperf iptraf smcroute`
+
+
 ###### ping test
 optional maxloss and maxdelay requirements
 
@@ -444,8 +450,8 @@ FGT-B1-1:1 check [bfd_neighbor_up] bfd vdom=bfd neighbor 172.18.1.9 has state=up
 
 Checks on HA status: `get system ha status` (in global)
   - checks ha report unit healthy (HA Health Status: OK)
-  - checks if unit with the given hostname is master of slave  ()
-  - checks how many unit seen in the cluster
+  - checks if unit with the given hostname is master or slave  ()
+  - checks how many units are seen in the cluster
   - Checks if a given serial number is know in the cluster
   - checks if all members have their configuration synchronized (configuration status -> in-sync)
 
